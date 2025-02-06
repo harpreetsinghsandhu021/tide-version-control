@@ -48,7 +48,7 @@ class Repository
       return :added if !item
       return :deleted if !entry
 
-      if entry.mode != item.mode and entry.oid != item.oid
+      if entry.mode != item.mode or entry.oid != item.oid
         :modified
       end
     end

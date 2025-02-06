@@ -91,4 +91,16 @@ class Refs
     nil
   end
 
+  def set_head(revision, oid)
+    head = @pathname.join(HEAD)
+    path = @heads_path.join(revision)
+
+    if File.file?(path)
+      relative = path.relative_path_from(@pathname)
+      update_ref_file(head, "ref: #{ relative }")
+    else
+      update_ref_file(head, oid)
+    end
+  end
+
 end
