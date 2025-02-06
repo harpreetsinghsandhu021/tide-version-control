@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+
+require_relative "../lib/command"
+
+# Set default author information for commits
+ENV['GIT_AUTHOR_NAME'] = 'Harpreet Singh'
+ENV['GIT_AUTHOR_EMAIL'] = 'harpreet.sandhu.dev@gmail.com'
+
+# Execute the command with current working directory and environment
+cmd = Command.execute(Dir.getwd, ENV, ARGV, $stdin, $stdout, $stderr)
+exit cmd.status
+
+begin
+  # Extract the command name from arguments
+  name = ARGV.shift
+  Command.execute(name)
+rescue Command::Unknown => error 
+  # Handle unknown command errors
+  $stderr.puts "tide: #{ error.message }"
+  exit 1
+rescue => error
+  # Handle all other errors
+  $stderr.puts("fatal: #{ error.message }")
+  # Print stack trace if DEBUG environment variable is set
+  if ENV['DEBUG']
+    error.backtrace.each do |line|
+      $stderr.puts "        from #{ line }"
+    end
+  end
+  exit 1
+end
