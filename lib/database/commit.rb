@@ -6,7 +6,7 @@ class Database
     # Object ID (SHA1 hash) of the commit
     # Set after the commit is stored in the database
     attr_accessor :oid
-    attr_reader :tree, :parent
+    attr_reader :tree, :parent, :message
   
     # Initialize a new commit
     # @param parent [String, nil] OID of parent commit, nil for root commit
