@@ -1,10 +1,21 @@
+require "colorize"
+
 require_relative "../revision"
+
 
 module Command 
   class Branch < Base
     
     def run 
-      create_branch
+      if @options[:delete]
+        delete_branches
+      elsif @args.empty?
+        list_branches
+      else 
+        create_branch
+      end
+
+
       exit 0
     end
 
@@ -28,5 +39,65 @@ module Command
       @stderr.puts "fatal: #{ error.message }"
       exit 128
     end
+
+    def define_options
+      @parser.on("-v", "--verbose") { @options[:verbose] = true }
+
+      @parser.on("-d", "--delete") {@options[:delete] = true}
+      @parser.on("-f", "--force") {@options[:force] = true}
+      @parser.on "-D" do 
+        @options[:delete] = @options[:force] = true
+      end
+    end
+
+    def list_branches
+      current = repo.refs.current_ref
+      branches = repo.refs.list_branches.sort_by(&:path)
+      max_width = branches.map { |b| b.short_name.size }.max
+
+      setup_pager
+
+      branches.each do |ref|
+        info = format_ref(ref, current)
+        info.concat(extended_branch_info(ref, max_width))
+        puts info
+      end
+
+    end
+
+    def format_ref(ref, current)
+      if ref == current
+        "* #{ ref.short_name.colorize(:green) }"
+      else 
+        " #{ ref.short_name }"
+      end
+    end
+
+    def extended_branch_info(ref, max_width)
+      return "" if !@options[:verbose]
+      commit = repo.database.load(ref.read_oid)
+      short = repo.database.short_oid(commit.oid)
+      space = " " * (max_width - ref.short_name.size)
+
+      "#{ space } #{ short } #{ commit.title_line }"
+    end
+
+    def delete_branches
+      @args.each { |branch_name| delete_branch(branch_name) }
+    end
+    
+    def delete_branch(branch_name)
+      return if !@options[:force]
+
+      oid = repo.refs.delete_branch(branch_name)
+      short = repo.database.short_oid(oid)
+
+      puts "Deleted branch #{ branch_name } (was #{ short })."
+
+    rescue Refs::InvalidBranch => error
+      @stderr.puts "error: #{ error }"
+      exit 1
+    end
+
   end
 end

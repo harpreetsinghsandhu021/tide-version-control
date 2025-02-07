@@ -1,4 +1,5 @@
 require "colorize"
+require "optionparser"
 require_relative "../pager"
 
 module Command 
@@ -29,6 +30,7 @@ module Command
     # This allows commands to exit early using the exit method
     # @return [void]
     def execute
+      parse_options
       catch(:exit) { run }
 
       # when the current command calls exit, it waits for the pager to exit if there`s a pager active. 
@@ -79,6 +81,18 @@ module Command
 
     def fmt(style, string)
       @isatty ? colorize(string) : string
+    end
+
+    def parse_options
+      @options = {}
+      @parser = OptionParser.new
+
+      define_options
+      @parser.parse!(@args)
+    end
+
+    def define_options
+      
     end
 
   end

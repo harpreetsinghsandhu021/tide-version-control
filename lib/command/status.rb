@@ -40,7 +40,7 @@ module Command
 
     # Prints the Status of Files
     def print_results
-      if @args.first == '--porcelain'
+      if @options[:format] == "porcelain"
         print_porcelain_format
       else
         print_long_format 
@@ -101,6 +101,11 @@ module Command
       right = SHORT_STATUS.fetch(@status.workspace_changes[path], " ")
 
       left + right
+    end
+
+    def define_options
+      @options[:format] = "long"
+      @parser.on("--porcelain") { @options[:format] = "porcelain"}
     end
   
   end
