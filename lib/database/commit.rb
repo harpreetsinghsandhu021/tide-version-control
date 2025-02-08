@@ -62,5 +62,9 @@ class Database
     def title_line
       @message.lines.first
     end
+
+    def date 
+      @author.time
+    end
   end
 end

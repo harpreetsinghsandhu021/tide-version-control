@@ -67,9 +67,9 @@ class Database
   end
 
    # Calculating and returning the diff between two commits or trees
-  def tree_diff(a, b)
+  def tree_diff(a, b, filter = PathFilter.new)
     diff = TreeDiff.new(self)
-    diff.compare_oids(a, b)
+    diff.compare_oids(a, b, filter)
     diff.changes
   end
 

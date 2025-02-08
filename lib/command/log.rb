@@ -1,4 +1,6 @@
 require "colorize"
+require_relative "./shared/print_diff"
+require_relative "../rev_list"
 
 module Command
   class Log < Base
@@ -11,19 +13,10 @@ module Command
       @reverse_refs = repo.refs.reverse_refs
       @current_ref = repo.refs.current_ref
 
-      each_commit { |commit| show_commit(commit) }
+      @rev_list = RevList.new(repo, @args)
+      @rev_list.each { |commit| show_commit(commit) }
       
       exit 0
-    end
-
-    def each_commit
-      oid = repo.refs.read_head
-
-      while oid 
-        commit = repo.database.load(oid)
-        yield commit
-        oid = commit.parent
-      end
     end
 
     def blank_line
@@ -130,7 +123,7 @@ module Command
       return if !@options[:patch]
 
       blank_line
-      print_commit_diff(commit.parent, commit.oid)
+      print_commit_diff(commit.parent, commit.oid, @rev_list)
     end
 
   end

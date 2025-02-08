@@ -43,6 +43,8 @@ class Revision
   | [\x00-\x20*:?\[\\^~\x7f] # Cannot contain special characters
   /x
 
+  HEAD = "HEAD"
+  
   # Pattern matching for parent reference (ends with ^)
   PARENT = /^(.+)\^$/
 

@@ -130,6 +130,6 @@ module Command
       a, b = @args.map { |rev| Revision.new(repo, rev).resolve }
       print_commit_diff(a, b)
     end
-
+    
   end
 end

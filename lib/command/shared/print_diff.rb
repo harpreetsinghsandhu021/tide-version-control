@@ -40,8 +40,9 @@ module Command
       repo.database.short_oid(oid)
     end
 
-    def print_commit_diff(a, b)
-      diff = repo.database.tree_diff(a, b)
+    def print_commit_diff(a, b, differ=nil)
+      differ ||= repo.database
+      diff = differ.tree_diff(a, b)
       paths = diff.keys.sort_by(&:to_s)
 
       paths.each do |path|
@@ -54,7 +55,7 @@ module Command
       return from_nothing(path) if !entry
 
       blob = repo.database.load(entry.oid)
-      Target.new(path, entry.oid, entry.mode_to_s(8), blob.data)
+      Target.new(path, entry.oid, entry.mode.to_s(8), blob.data)
     end
 
     def print_diff(a, b)
