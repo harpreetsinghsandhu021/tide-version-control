@@ -22,5 +22,14 @@ module Merge
       Revision.new(@repo, rev).resolve(Revision::COMMIT)
     end
 
+    # If returns true, the merge class can bail out before trying to make any changes.
+    def already_merged?
+      @base_oids == [@right_oid]
+    end
+
+    def fast_forward?
+      @base_oids == [@left_oid]
+    end
+
   end
 end
