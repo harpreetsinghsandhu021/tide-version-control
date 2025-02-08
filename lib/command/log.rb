@@ -120,7 +120,7 @@ module Command
     end
 
     def show_patch(commit)
-      return if !@options[:patch]
+      return if !@options[:patch] and commit.parents.size <= 1
 
       blank_line
       print_commit_diff(commit.parent, commit.oid, @rev_list)

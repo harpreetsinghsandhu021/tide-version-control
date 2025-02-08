@@ -95,16 +95,20 @@ class RevList
     end
   end
 
-  # Recursively mark all parent commits as uninteresting
+  # Marks all ancestors of a given commit as uninteresting.
+  # This is used to exclude certain commits from being considered as merge bases.
+  # @param commit [Commit] The commit whose ancestors should be marked as uninteresting.
   def mark_parents_uninteresting(commit)
-    # Iterate over parent commits until there are no more parents or we encounter a parent
-    # that`s already marked as unintersting
-    while commit&.parent
-      break if !mark(commit.parent, :uninteresting)
+   queue = commit.parents.clone
 
-      # Load the parent commit from the cache
-      commit = @commits[commit.parent]
-    end
+   until queue.empty?
+     oid = queue.shift
+     next if !mark(oid, :uninteresting)
+     commit = @commits[oid]
+     # Add the parents of the current commit to the queue.
+     # This ensures that all ancestors of the original commit are processed.
+     queue.concat(commit.parents) if commit
+   end
   end
 
   # Takes the Commit object, and marks it with the :seen flag if not set before, this means the commit has already been 
@@ -184,28 +188,50 @@ class RevList
   end
 
 
-  # Adds the parent of a given commit to the processing queue
+  # Adds the parents of a given commit to the processing queue
   # prevents re-processing of the same commit and handles marking parents as uninteresting if needed
   def add_parents(commit)
     return if !mark(commit.oid, :added) # check the mark to see if its added before to prevent reprocessing
 
-    parent = load_commit(commit.parent)
-    return if !parent
-
     if marked?(commit.oid, :uninteresting)
-      mark_parents_uninteresting(parent)
+      parents = commit.parents.map { |oid| load_commit(oid) }
+      parents.each {|parent| mark_parents_uninteresting(parent) }
     else 
-      simplify_commit(commit)
+      parents = simplify_commit(commit).map { |oid| load_commit(oid) }
     end
 
-    enqueue_commit(parent)
+    parents.each { |parent| enqueue_commit(parent) }
   end
 
-  # Simplifies a commit by marking it as :treesame if it does`nt introduce changes to the filteres paths
+  # Simplifies the commit history by identifying commits that don't introduce changes
+  # to the paths being considered (as specified by the `@prune` set). 
+  # @param commit [Commit] The commit to be analyzed for simplification.
+  # @return [Array<String>, nil] An array of parent OIDs to follow if the commit is 
+  # simplified, otherwise returns the original commit's parents.
   def simplify_commit(commit)
-    return if @prune.empty? # If no paths are being filtered, no simplification is needed
-    # mark the commit as :treesame if the treediff with its parent is empty
-    mark(commit.oidm :treesame) if tree_diff(commit.parent, commit.oid).empty? 
+    return commit.parents if @prune.empty? # If no paths are being filtered, no simplification is needed
+    
+    parents = commit.parents 
+    parents = [nil] if parents.empty?
+
+    parents.each do |oid|
+      # If the tree diff is not empty (meaning there are changes), move to the next parent.
+      next if !tree_diff(oid, commit.oid).empty? 
+
+      # If the tree diff is empty, it means the commit doesn't introduce changes 
+      # to the paths we care about.
+      # Mark the commit as having the same tree as its parent.
+      mark(commit.oid, :treesame) 
+
+      # Return an array containing only the current parent's OID. 
+      # This effectively simplifies the history by making the current commit
+      # seemingly directly follow this parent.
+      return [*oid]
+    end
+
+    # If none of the parents resulted in simplification,
+    # return the original list of the commit's parents.
+    commit.parents 
   end
 
   def load_commit(oid)

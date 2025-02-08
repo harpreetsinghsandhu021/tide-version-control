@@ -13,12 +13,12 @@ class Revision
     end
   end
 
-  Parent = Struct.new(:rev) do  # Parent reference like 'master^'
+  Parent = Struct.new(:rev, :n) do  # Parent reference like 'master^'
     def resolve(context)
       # As parent nodes contain another revision node inside themselves, we call resolve on its inner node, and 
       # pass the result of that to another method commit_parent, which will load the given object ID to get a commit 
       # and then return the commit`s parent ID
-      context.commit_parent(rev.resolve(context))
+      context.commit_parent(rev.resolve(context), n)
     end
   end
 
@@ -45,8 +45,8 @@ class Revision
 
   HEAD = "HEAD"
   
-  # Pattern matching for parent reference (ends with ^)
-  PARENT = /^(.+)\^$/
+  # Pattern matching for parent reference (ends with zero or more digits)
+  PARENT = /^(.+)\^(\d*)$/
 
   # Pattern matching for ancestor reference (ends with ~N where N is a number)
   ANCESTOR = /^(.+)~(\d+)$/
@@ -99,11 +99,18 @@ class Revision
     INVALID_NAME =~ revision ? false : true
   end
 
-  def commit_parent(oid)
+  # Retrieves the nth parent commit of a given commit object
+  # @param oid [String] The object ID (SHA-1) of the commit whose parent we want to find
+  # @param n [Integer] Which parent to retrieve (defaults to 1, matters for merge commits with multiple parents)
+  # @return [String, nil] The OID of the nth parent, or nil if the commit or parent doesn't exist.
+  def commit_parent(oid, n = 1)
     return nil if !oid
 
     commit = load_typed_object(oid, COMMIT)
-    commit.parent
+    return nil if !commit
+    
+    # Return the OID of the nth parent of the commit.
+    commit.parents[n - 1]
   end
 
   def load_typed_object(oid, type)

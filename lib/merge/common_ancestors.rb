@@ -6,20 +6,27 @@ module Merge
     # A constant Set representing the flags for commits reachable from both starting commits
     BOTH_PARENTS = Set.new([:parent1, :parent2])
     
-    def initialize(database, one, two)
+    def initialize(database, one, twos)
       @database = database
       # Hash to store flags for each visited commit.
       @flags = Hash.new { |hash, new| hash[oid] = Set.new } 
       # store commits that need to be visited
       @queue = []
+
+      @results = []
       
       # Add the first commit to the queue and mark it as parent1
       insert_by_date(@queue, @database.load(one))
       @flags[one].add(:parent1)
 
-       # Add the second commit to the queue and mark it as parent2
-      insert_by_date(@queue, @database.load(two))
-      @flags[two].add(:parent2)
+
+      twos.each do |two|
+         # Add the second commit to the queue and mark it as parent2
+         insert_by_date(@queue, @database.load(two))
+         @flags[two].add(:parent2)
+      end
+
+      
     end
 
     # Inserts a commit into a list sorted by date.
@@ -36,29 +43,47 @@ module Merge
 
     # Finds the BCA of the two commits using a BFS approach through the commit history
     def find 
-      until @queue.empty?
-        commit = @queue.shift
-        flags = @flags[commit.oid]
-
-        return commit.oid if flags == BOTH_PARENTS # If the commit is reachable by both starting commits, we found a common ancestor
-
-        add_parents(commit, flags) # Add the commit's parents to the queue for processing.
-      end
+     process_queue until all_stale?
+     @results.map(&:oid).reject { |oid| marked?(oid, :stale) }
     end
 
      # Adds the parents of the given commit to the queue for processing.
      # @param commit [Commit] The commit whose parents to add.
      # @param flags [Set] The flags associated with the commit.
     def add_parents(commit, flags)
-      return if !commit.parent # If the commit has no parent, skip it (this is the initial commit).
-
-      parent = @database.load(commit.parent)
-
+      # Iterates over all the parents of the commit
+     commit.parents.each do |parent|
       # If the parent already has all the flags that this commit has, skip it (already processed).
-      return if @flags[parent.oid].superset?(flags)
+      next if @flags[parent].superset?(flags)
 
-      @flags[parent.oid].merge(flags) # Add the current commit's flags to the parent's flags.
-      insert_by_date(@queue, parent) # Insert the parent into the queue, maintaining the date order.
+      @flags[parent].merge(flags) # Add the current commit's flags to the parent's flags.
+      insert_by_date(@queue, @database.load(parent)) # Insert the parent into the queue, maintaining the date order.
+     end
+
+    end
+
+    private 
+
+    def all_stale?
+      @queue.all? { |commit| marked?(commit.oid, :stale) }
+    end
+
+    def marked?(oid, flag)
+      @flags[oid].include?(flag)
+    end
+
+    def process_queue
+      commit = @queue.shift
+      flags = @flags[commit.oid]
+      
+      if flags == BOTH_PARENTS
+        flags.add(:result)
+        insert_by_date(@results, commit)
+        add_parents(commit, flags + [:stale])
+      else 
+        add_parents(commit, flags)
+      end
+
     end
 
   end

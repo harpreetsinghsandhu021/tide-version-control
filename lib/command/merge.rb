@@ -10,8 +10,8 @@ module Command
 
       merge_oid = revision.resolve(Revision::COMMIT)
 
-      common = ::Merge::CommonAncestors.new(repo.database, head_oid, merge_oid)
-      base_oid = common.find
+      common = ::Merge::Bases.new(repo.database, head_oid, merge_oid)
+      base_oid = common.find.first
 
       repo.index.load_for_update
 
