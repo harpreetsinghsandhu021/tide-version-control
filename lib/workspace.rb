@@ -62,6 +62,8 @@ class Workspace
   # @raise [NoPermission] if file can't be accessed
   def stat_file(path)
     File.stat(@pathname.join(path))
+  rescue Errno::ENOENT, Errno::ENOTDIR
+    nil
   rescue Errno::EACCES
     raise NoPermission, "stat('#{ path }'): Permission denied"
   end

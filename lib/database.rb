@@ -26,7 +26,7 @@ class Database
     @objects = {}
   end
 
-  # Stores a git object (blob, tree, or commit) in the database
+  # Stores a tide object (blob, tree, or commit) in the database
   # @param object [Object] The object to store
   # @return [void]
   def store(object)

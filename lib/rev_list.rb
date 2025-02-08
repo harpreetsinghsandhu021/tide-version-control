@@ -1,4 +1,5 @@
 require_relative "./revision"
+require_relative "./path_filter"
 
 class RevList 
 

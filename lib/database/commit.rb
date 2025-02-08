@@ -6,15 +6,15 @@ class Database
     # Object ID (SHA1 hash) of the commit
     # Set after the commit is stored in the database
     attr_accessor :oid
-    attr_reader :tree, :parent, :message, :author
+    attr_reader :tree, :parents, :message, :author
   
     # Initialize a new commit
     # @param parent [String, nil] OID of parent commit, nil for root commit
     # @param tree [String] OID of the tree object representing project state
     # @param author [Author] Author information including name, email, timestamp
     # @param message [String] Commit message
-    def initialize(parent, tree, author, message)
-      @parent = parent
+    def initialize(parents, tree, author, message)
+      @parents = parents
       @tree = tree
       @author = author 
       @message = message
@@ -31,7 +31,7 @@ class Database
     def to_s 
       lines = []
       lines.push("tree #{ @tree }")
-      lines.push("parent #{ @parent }") if @parent
+      lines.concat(@parents.map { |oid| "parent #{ oid }"})
       lines.push("author #{ @author }")
       lines.push("committer #{ @author }")
       lines.push("")
@@ -44,18 +44,18 @@ class Database
     def self.parse(scanner)
       # a commit is stored as a series of line-delimited header fields, followed 
       # by a blank line, followed by a message
-      headers = {} 
+      headers = Hash.new { |hash, key| hash[key] = [] } 
 
       loop do 
         line = scanner.scan_until(/\n/).strip # read up to the next line break
         break if line == ""
 
         key, value = line.split(/ +/, 2) # split the line on first space
-        headers[key] = value
+        headers[key].push(value)
       end
 
 
-      Commit.new(headers["parent"], headers["tree"], Author.parse(headers["author"]), scanner.rest)
+      Commit.new(headers["parent"], headers["tree"].first, Author.parse(headers["author"].first), scanner.rest)
 
     end
 
@@ -65,6 +65,10 @@ class Database
 
     def date 
       @author.time
+    end
+
+    def parent 
+      @parents.first
     end
   end
 end
