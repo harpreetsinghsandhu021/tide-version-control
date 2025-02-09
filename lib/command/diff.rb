@@ -41,6 +41,11 @@ module Command
       @options[:patch] = true
       define_print_diff_options
       @parser.on("--cached","--staged") { @options[:cached] = true} 
+
+      @parser.on("-1", "--base") { @options[:stage] = 1}
+      @parser.on("-2", "--ours") { @options[:stage] = 2}
+      @parser.on("-3", "--theirs") { @options[:stage] = 3}
+
     end
   
 
@@ -68,13 +73,32 @@ module Command
     def diff_index_workspace
       return if !@options[:patch]
 
-      @status.workspace_changes.each do |path, state|
-        if state == :modified
-          print_diff(from_index(path), from_file(path))
-        elsif state == :deleted
-          print_diff(from_index(path), from_nothing(path))
+      paths = @status.conflicts.keys + @status.workspace_changes.keys
+
+      paths.sort.each do |path|
+        if @status.conflicts.has_key?(path)
+          print_conflict_diff(path)
         else 
+          print_workspace_diff(path)
         end
+      end
+     
+    end
+
+    def print_conflict_diff(path)
+      puts "* Unmerged path #{ path }"
+
+      target = from_index(path, @options[:stage])
+      return if !target
+
+      print_diff(target, from_file(path))
+    end
+
+    def print_workspace_diff(path)
+      if @status.workspace_changes[path] == :modified
+        print_diff(from_index(path), from_file(path))
+      elsif  @status.workspace_changes[path] == :deleted
+        print_diff(from_index(path), from_nothing(path))
       end
     end
 
@@ -107,14 +131,14 @@ module Command
       print_diff(a, b)
     end
 
-    def from_index(path)
-      entry = repo.index.entry_for_path(path)
-      Target.new(path, entry.oid, entry.mode.to_s(8))
-    end
+    # def from_index(path)
+    #   entry = repo.index.entry_for_path(path)
+    #   Target.new(path, entry.oid, entry.mode.to_s(8))
+    # end
 
-    def from_index(path)
-      entry = repo.index.entry_for_path(path)
-      from_entry(path, entry)
+    def from_index(path, stage = 0)
+      entry = repo.index.entry_for_path(path, stage)
+      entry ? from_entry(path, entry) : nil
     end
 
     def from_file(path)

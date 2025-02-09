@@ -13,7 +13,7 @@ class Repository
     def trackable_file?(path, stat)
       return false if !stat
 
-      return !@repo.index.tracked?(path) if stat.file?
+      return !@repo.index.tracked_file?(path) if stat.file?
       return false if !stat.directory?
 
       items = @repo.workspace.list_dir(path)

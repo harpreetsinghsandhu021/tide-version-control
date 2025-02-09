@@ -13,6 +13,7 @@ module Command
     
     def run  
       repo.index.load
+      resume_merge if pending_commit.in_progress?
       root = Database::Tree.build(repo.index.each_entry)
       root.traverse { |tree| repo.database.store(tree) }
 

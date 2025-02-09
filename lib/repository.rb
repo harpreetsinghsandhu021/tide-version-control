@@ -3,8 +3,9 @@ require_relative './index'
 require_relative './refs'
 require_relative './workspace'
 require_relative "./repository/migration"
+require_relative './repository/status'
+require_relative "./repository/pending_commit"
 
-require_relative  './repository/status'
 class Repository
   def initialize(git_path)
     @git_path = git_path
@@ -32,5 +33,9 @@ class Repository
 
   def migration(tree_diff)
     Migration.new(self, tree_diff)
+  end
+
+  def pending_commit
+    PendingCommit.new(@git_path)
   end
 end

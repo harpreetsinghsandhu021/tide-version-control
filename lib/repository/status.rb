@@ -43,35 +43,13 @@ class Repository
         if @repo.index.tracked?(path)
           @stats[path] = stat if stat.file?
           scan_workspace(path) if stat.directory?
-        elsif trackable_file?(path, stat)
+        elsif @inspector.trackable_file?(path, stat)
           path += File::Separator if stat.directory?
           @untracked_files.add(path)
         end
       end
     end
 
-
-    # Determines if a file should be tracked
-    # @param path [String] Path to check
-    # @param stat [File::Stat] File statistics
-    # @return [Boolean] true if file should be tracked
-    def trackable_file?(path, stat)
-      return false if !stat
-
-      return !@repo.index.tracked?(path) if stat.file?
-      return false if !stat.directory?
-
-      items = @repo.workspace.list_dir(path)
-      files = items.select { |_, item_stat| item_stat.file? }
-      dirs = items.select { |_, item_stat| item_stat.directory? }
-
-      # Check if any files or directories should be tracked
-      [files, dirs].any? do |list|
-        list.any? do |item_path, item_stat|
-         trackable_file?(item_path, item_stat)
-        end
-      end
-    end
 
     # Loads the whole of the head commit tree
     def load_head_tree
@@ -146,7 +124,7 @@ class Repository
     def collect_deleted_head_files
       @head_tree.each_key do |path|
         # Change tracked_file? to tracked? to match the method used elsewhere
-        unless @repo.index.tracked?(path)
+        unless @repo.index.tracked_file?(path)
           record_change(path, @index_changes, :deleted)
         end
       end

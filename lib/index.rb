@@ -34,6 +34,7 @@ class Index
   # @param oid [String] Object ID of the blob
   # @param stat [File::Stat] File status information
   def add(pathname, oid, stat)
+    (1..3).each { |stage| remove_entry_with_stage(pathname, stage) } # remove any conflict entries
     entry = Entry.create(pathname, oid, stat)
     discard_conflicts(entry)
     store_entry(entry)
@@ -124,8 +125,18 @@ class Index
   # @param path [String, Pathname] Path to check
   # @return [Boolean] true if path is tracked
   def tracked?(path)
-    @entries.has_key?(path.to_s) or @parents.has_key?(path.to_s)
+    tracked_file?(path) or tracked_directory?(path)
   end
+  
+  def tracked_directory?(path)
+    @parents.has_key?(path.to_s)
+  end
+
+  def tracked_file?(path)
+    (0..3).any? { |stage| @entries.has_key?([path.to_s, stage]) }
+  end
+
+  
 
   # Update file statistics for an entry
   # @param entry [Entry] Entry to update
@@ -183,9 +194,7 @@ class Index
     @entries[[path.to_s, stage]]
   end
 
-  def tracked_file?(path)
-    (0..3).any? { |stage| @entries.has_key?([path.to_s, stage]) }
-  end
+  
 
   # Deletes the entry at exactly the given pathname if one exists, and deletes 
   # any index entries that are nested under that name
