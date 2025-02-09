@@ -57,10 +57,17 @@ class Index
     children.each { |child| remove_entry(child) }
   end
 
+
   # Remove an entry and update parent directories
   # @param pathname [Pathname] Path to remove
   def remove_entry(pathname)
-    entry = @entries[pathname.to_s]
+    (0..3).each { |stage| remove_entry_with_stage(pathname, stage) }
+  end
+
+  # Remove an entry and update parent directories
+  # @param pathname [Pathname] Path to remove
+  def remove_entry_with_stage(pathname, stage)
+    entry = @entries[[pathname.to_s, stage]]
     return if !entry
 
     @keys.delete(entry.key)
@@ -172,8 +179,8 @@ class Index
     @changed = false
   end
 
-  def entry_for_path(path)
-    @entries[path.to_s]
+  def entry_for_path(path, stage = 0)
+    @entries[[path.to_s, stage]]
   end
 
   def tracked_file?(path)
@@ -186,6 +193,33 @@ class Index
     remove_entry(pathname)
     remove_children(pathname.to_s)
     @changed = true
+  end
+
+  # Responsible for handling merge conflict. It records the conflicting versions of a file in the index so that 
+  # tide knows there is a conflict that needs attention.
+  def add_conflict_set(pathname, items)
+    # remove any existing entry for the given pathname at stage 0 (the main content stage)
+    remove_entry_with_stage(pathname, 0)
+    
+    # Iterate through the items array, where each item represents a different version of the file involved in the conflict.
+    items.each_with_index do |item, n|
+      next if !item # Skip if an item is nil, meaning that particular version of the file is not present.
+
+      # Adds three new entries for the conflicted file
+      # Create a new Index::Entry object.
+      # pathname is the path of the file in the workspace.
+      # item is the Database::Entry representing a specific version of the file involved in the conflict.
+      # n + 1 sets the stage for the entry (1 for common ancestor, 2 for "ours", 3 for "theirs")
+      entry = Entry.create_from_db(pathname, item, n + 1)
+      store_entry(entry)
+    end
+
+    # Mark the index as modified, indicating that it needs to be written back to disk.
+    @changed = true
+  end
+
+  def conflict?
+    @entries.any? { |key, entry| entry.stage > 0 }
   end
 
   private

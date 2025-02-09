@@ -107,5 +107,10 @@ class Workspace
     Dir.mkdir(path) if !stat&.directory?
   end
 
+  def write_file(path, data)
+    flags = File::Constants::WRONLY | File::Constants::CREAT | File::Constants::TRUNC
+    File.open(@pathname.join(path), flags) { |f| f.write(data) }
+  end
+
 end
 

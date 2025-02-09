@@ -59,13 +59,36 @@ class Index
     end 
 
     def key 
-      path 
+      [path, stage] 
+    end
+
+    # Extracting an entry`s stage from its flags number
+    def stage
+      # bit shifting the value by 12 places, and selecting the two least significant digits
+      (flags >> 12) & 0x3
     end
 
     def self.parse(data)
       new(*data.unpack(ENTRY_FORMAT))
     end
-  
+
+    def self.create_from_db(pathname, item, n)
+      path = pathname.to_s
+
+      # Used to pack two pieces of information into the flags field of an Index::Entry:, 
+      # The n value represents the merge stage of the entry (1 for common ancestor, 2 for "ours", 3 for "theirs"). 
+      # Shifting it left by 12 bits (n << 12) positions it in the higher bits of the flags field.
+      # [path.bytesize, MAX_PATH_SIZE].min calculates the length of the file path, capped at MAX_PATH_SIZE.
+      # This length is stored in the lower bits of the flags field.
+      # Bitwise OR (|) combines these two values, placing the stage in the higher bits and the path length in the lower bits. 
+      # This efficiently stores both pieces of data within a single integer field.
+      flags = (n << 12) | [path.bytesize, MAX_PATH_SIZE].min
+
+      # Many of the timestamp and stat fields are set to 0 because they are not relevant for conflict entries.
+      # IMPORTANT - The calculated flags value (containing the stage and path length information).
+      Entry.new(0, 0, 0, 0, 0, 0, item.mode, 0, 0, 0,item.oid, flags, path)
+    end
+
     def parent_directories
       Pathname.new(path).descend.to_a[0..-2]
     end
@@ -78,8 +101,6 @@ class Index
       mode == Entry.mode_for_stat(stat) and (size == 0 or size == stat.size)
     end
 
-    
-  
   end
 
  

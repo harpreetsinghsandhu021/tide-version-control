@@ -2,7 +2,7 @@ require_relative "./inspector"
 class Repository
   class Status
 
-    attr_reader :changed, :index_changes, :workspace_changes, :untracked_files, :stats, :head_tree
+    attr_reader :changed, :index_changes, :workspace_changes, :untracked_files, :stats, :head_tree, :conflicts
     
     
     def initialize(repository) 
@@ -13,6 +13,8 @@ class Repository
       
       @index_changes = SortedHash.new
       @workspace_changes = SortedHash.new
+
+      @conflicts = SortedHash.new
 
       @inspector = Inspector.new(repository)
 
@@ -95,11 +97,18 @@ class Repository
       end
     end
 
-      # Checks index entries against workspace and the HEAD tree
+    # Checks index entries against workspace and the HEAD tree
     def check_index_entries
       @repo.index.each_entry do |entry|
-        check_index_against_workspace(entry)
-        check_index_against_head_tree(entry)
+        if entry.stage == 0
+          check_index_against_workspace(entry)
+          check_index_against_head_tree(entry)
+        else 
+          @changed.add(entry.path)
+          @conflicts[entry.path] ||= []
+          @conflicts[entry.path].push(entry.stage)
+        end
+       
       end  
     end
 
