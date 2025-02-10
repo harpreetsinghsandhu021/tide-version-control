@@ -96,9 +96,15 @@ module Merge
         result = merge3(base_oid, left_oid, right_oid)
         return result if result
 
-        blob = Database::Blob.new(merged_data(left_oid, right_oid))
+        oids = [base_oid, left_oid, right_oid]
+        blobs = oids.map { |oid| oid ? @repo.database.load(oid).data : ""}
+        merge = Diff3.merge(*blobs)
+
+        data = merge.to_s(@inputs.left_name, @inputs.right_name)
+        blob = Database::Blob.new(data)
         @repo.database.store(blob)
-        [false, blob.oid]
+
+        [merge.clean?, blob.oid]
       end
 
       def merged_data(left_oid, right_oid)
