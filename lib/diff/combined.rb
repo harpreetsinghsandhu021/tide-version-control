@@ -18,6 +18,20 @@ module Diff
 
         symbols.join("") + line.text
       end
+
+      def type 
+        types = edits.compact.map(&:type)
+        types.include?(:ins) ? :ins : types.first
+      end
+
+      def b_line 
+        edits.first&.b_line
+      end
+
+      def a_lines
+        edits.map { |edit| edit&.a_line }
+      end
+
     end
 
     # @param diffs [Array<Array<Edit>>] An array of diffs, where each diff is an array of `Edit` objects.

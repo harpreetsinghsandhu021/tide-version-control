@@ -16,7 +16,7 @@ module Command
       @rev_list = RevList.new(repo, @args)
       @rev_list.each { |commit| show_commit(commit) }
       
-      exit 0
+      exit 0         
     end
 
     def blank_line
@@ -39,6 +39,10 @@ module Command
     
       blank_line
       puts "commit #{ abbrev(commit).colorize(:yellow) + decorate(commit) }"
+      if commit.merge?
+        oids = commit.parents.map { |oid| repo.database.short_oid(oid) }
+        puts "Merge: #{ oids.join(" ") }"
+      end
       puts "Author: #{ author.name } <#{ author.email }>"
       puts "Date:   #{ author.readable_time }"
       blank_line
@@ -74,6 +78,10 @@ module Command
 
       @parser.on "--no-decorate" do 
         @options[:decorate] = "no"
+      end
+
+      @parser.on "--c" do
+        @options[:combined] = @options[:patch] = true
       end
 
     end
@@ -121,9 +129,40 @@ module Command
 
     def show_patch(commit)
       return if !@options[:patch] and commit.parents.size <= 1
+      return show_merge_patch(commit) if commit.merge?
 
       blank_line
       print_commit_diff(commit.parent, commit.oid, @rev_list)
+    end
+
+    def show_merge_patch(commit)
+      return if @options[:combined]
+
+       # 1. It looks at the commit's parents (remember, merges have two!)
+       # 2. For each parent, it calculates the difference in files (a "tree diff") 
+       # between that parent and the current commit.
+       # 3. All these diffs are stored in a list called 'diffs'.
+      diffs = commit.parents.map { |oid| @rev_list.tree_diff(oid, commit.oid) }
+
+      # Now, we want to find files that were changed in BOTH parent branches.
+      # 1. We look at the first diff and get a list of all the file paths it touched.
+      # 2. We check if ALL the other diffs also have those paths.
+      paths = diffs.first.keys.select do |path|
+        diffs.drop(1).all? { |diff| diff.has_key?(path) }
+      end
+
+      blank_line
+
+      # For each file that was changed in both branches.
+      paths.each do |path|
+        # Get the target from both parents.
+        parents = diffs.map { |diff| from_entry(path, diff[path][0]) }
+        # get the target from the merged commit.
+        child = from_entry(path, diffs.first[path][1])
+
+        # Show how merge resolved the changes.
+        print_combined_diff(parents, child)
+      end
     end
 
   end

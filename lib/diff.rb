@@ -30,6 +30,10 @@ module Diff
       line = a_line || b_line 
       SYMBOLS.fetch(type) + line.text
     end
+
+    def a_lines
+      [a_line]
+    end
   end
 
   # Converts a document (string or array) into an array of Line objects
@@ -64,6 +68,11 @@ module Diff
   def self.combined(as, b)
     diffs = as.map { |a| Diff.diff(a, b) }
     Combined.new(diffs).to_a
+  end
+
+  # Generate Hunk-filtered combined diff from a list of pre merge versions and a merge result.
+  def self.combined_hunks(as, b)
+    Hunk.filter(Diff.combined(as, b))
   end
 end
 

@@ -70,5 +70,11 @@ class Database
     def parent 
       @parents.first
     end
+
+    # Check If it`s a merge by checking the parents becuase a merge will have two parents
+    def merge?
+      @parents.size > 1
+    end
+
   end
 end
