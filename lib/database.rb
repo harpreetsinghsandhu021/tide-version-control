@@ -73,6 +73,26 @@ class Database
     diff.changes
   end
 
+
+  def load_tree_entry(oid, pathname)
+    commit = load(oid)
+
+    # From this commit, we get its 'tree', which is like a directory listing of all the files at that point in time. 
+    # We create an 'Entry' representing this top-level directory. It's like opening the main folder of your project.
+    root = Entry.new(commit.tree, Tree::TREE_MODE)
+
+    # If no specific 'pathname' is provided, we just return the 'root' directory entry. 
+    # It's like saying "just show me what's in the main folder, I don't need to go deeper."
+    return root if !pathname
+
+    #  If a 'pathname' is provided, this means we want to find a specific file or folder within the commit's tree.
+
+    # We split the 'pathname' into individual parts (like splitting a file path into its folders).
+    pathname.each_filename.reduce(root) do |entry, name|
+      entry ? load(entry.oid).entries[name] : nil
+    end
+  end
+
   private
 
   # Converts an object into its git-compatible string representation

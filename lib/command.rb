@@ -6,6 +6,7 @@ require_relative './command/diff'
 require_relative './command/branch'
 require_relative './command/checkout'
 require_relative './command/log'
+require_relative './command/rm'
 
 module Command 
   Unknown = Class.new(StandardError)
@@ -18,7 +19,8 @@ module Command
     "diff" => Diff,
     "branch" => Branch,
     "checkout"=> Checkout, 
-    "log" => Log
+    "log" => Log, 
+    "rm" => Rm,
   }
 
   def self.execute(dir, env, argv, stdin, stdout, stderr)

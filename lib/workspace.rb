@@ -99,6 +99,12 @@ class Workspace
   rescue Errno::ENONET, Errno:: ENOTDIR, Errno::ENOTEMPTY
   end
 
+  def remove(path)
+    File.unlink(@pathname.join(path))
+    path.dirname.ascend { |dirname| remove_directory(dirname) }
+  rescue Errno::ENOENT
+  end
+
   def make_directory(dirname)
     path = @pathname.join(dirname)
     stat = stat_file(path)

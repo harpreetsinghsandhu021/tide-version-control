@@ -231,6 +231,10 @@ class Index
     @entries.any? { |key, entry| entry.stage > 0 }
   end
 
+  def child_paths(path)
+    @parents[path.to_s].to_a 
+  end
+
   private
 
   # Open index file for reading
