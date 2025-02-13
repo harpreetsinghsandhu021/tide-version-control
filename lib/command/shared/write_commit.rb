@@ -1,11 +1,18 @@
-
 module Command
   module WriteCommit 
 
     CONFLICT_MESSAGE = <<~MSG
       hint: Fix them up in the work tree, and then use 'tide add <file>'
+      hint: Fix them up in the work tree, and then use 'tide add <file>'
       hint: as appropriate to mark resolution and make a commit.
       fatal: Exiting because of an unresolved conflict.
+    MSG
+
+    MERGE_NOTES = <<~MSG
+    It looks like you may be committing a merge.
+    If this is not correct, please remove the file
+    \t.git/MERGE_HEAD
+    and try again.
     MSG
     
     def write_commit(parents, message)
@@ -35,10 +42,24 @@ module Command
     def resume_merge
       handle_conflicted_index
       parents = [repo.refs.read_head, pending_commit.merge_oid]
-      write_commit(parents, pending_commit.merge_message)
+      message = compose_merge_message(MERGE_NOTES)
+      write_commit(parents, message)
 
       pending_commit.clear
       exit 0
+    end
+
+    def compose_merge_message(notes=nil)
+      edit_file(commit_message_path) do |editor|
+        editor.puts(pending_commit.merge_message)
+        editor.note(notes) if notes
+        editor.puts("")
+        editor.note(Commit::COMMIT_NOTES)
+      end
+    end
+
+    def commit_message_path
+      repo.git_path.join("COMMIT_EDITMSG")
     end
 
     def handle_conflicted_index
@@ -48,6 +69,39 @@ module Command
       @stderr.puts "error: #{ message }."
       @stderr.puts CONFLICT_MESSAGE
       exit 128
+    end
+
+    def print_commit(commit)
+      ref = repo.refs.current_ref
+      info = ref.head? ? "detached HEAD" : ref.short_name
+
+      oid = repo.database.short_oid(commit.oid)
+
+      info.concat(" (root-commit)") if !commit.parent 
+      info.concat(" #{ oid }")
+
+      puts "[#{ info }] #{ commit.title_line }"
+    end
+
+    def define_write_commit_options 
+      @options[:edit] = :auto
+      @parser.on("-e", "--[no-]edit") { |value| @options[:edit] = value }
+
+      @parser.on "-m <message>", "--message=<message>" do |message|
+        @options[:message] = message
+      end
+
+      @parser.on "-F <file>", "--file=<file>" do |file|
+        @options[:file] = expanded_pathname(file)
+      end
+    end
+
+    def read_message
+      if @options.has_key?(:message)
+        "#{ @options[:message] }\n"
+      elsif @options.has_key?(:file)
+        File.read(@options[:file])
+      end
     end
 
   end

@@ -6,6 +6,8 @@ class Repository
     
     Error = Class.new(StandardError)
 
+    attr_reader :message_path
+
     def initialize(pathname)
       @head_path = pathname.join("MERGE_HEAD")
       @message_path = pathname.join("MERGE_MSG")
@@ -16,7 +18,6 @@ class Repository
 
       File.open(@head_path, flags) { |f| f.puts(oid) }
       File.open(@message_path, flags) { |f| f.write(message) }
-
     end
 
     def clear 

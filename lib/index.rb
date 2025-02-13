@@ -302,5 +302,12 @@ class Index
     end
   end
 
+  # Returns a set of paths whose entries are in conflict.
+  def conflict_paths
+    paths = Set.new
+    each_entry { |entry| paths.add(entry.path) if !entry.stage == 0 }
+    paths
+  end
+
  
 end
