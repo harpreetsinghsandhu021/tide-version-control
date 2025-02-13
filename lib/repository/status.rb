@@ -5,7 +5,7 @@ class Repository
     attr_reader :changed, :index_changes, :workspace_changes, :untracked_files, :stats, :head_tree, :conflicts
     
     
-    def initialize(repository) 
+    def initialize(repository, commit_oid) 
       @repo = repository
       @stats = {}
       @changed = SortedSet.new
@@ -17,6 +17,10 @@ class Repository
       @conflicts = SortedHash.new
 
       @inspector = Inspector.new(repository)
+
+      commit_oid ||= @repo.refs.read_head
+      @head_tree = @repo.database.load_tree_list(commit_oid)
+      
 
       scan_workspace
       load_head_tree

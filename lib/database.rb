@@ -93,6 +93,32 @@ class Database
     end
   end
 
+  # Creates a flattened list of all files and directories stored within a given tree object in the database.
+  def load_tree_list(oid, pathname = nil)
+    return {} if !oid
+
+    entry = load_tree_entry(oid, pathname) # Get the entry object for the root. 
+    list = {}
+
+    # Recursively build the list starting from the given entry and prefix.
+    build_list(list, entry, pathname || Pathname.new(""))
+    list
+  end
+
+  def build_list(list, entry, prefix)
+    return if !entry
+
+    # Base case: If entry is a blob(file), add it to the list and return.
+    return list[prefix.to_s] = entry if !entry.tree?
+
+    # If entry is a tree(directory), iterate through its entries.
+    load(entry.oid).entries.each do |name, item| 
+      # Recursively call build_list with updated prefix.
+      build_list(list, item, prefix.join(name))
+    end
+  end
+
+
   private
 
   # Converts an object into its git-compatible string representation

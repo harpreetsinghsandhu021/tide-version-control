@@ -5,6 +5,7 @@ require_relative './workspace'
 require_relative "./repository/migration"
 require_relative './repository/status'
 require_relative "./repository/pending_commit"
+require_relative "./repository/hard_reset"
 
 class Repository
   def initialize(git_path)
@@ -27,8 +28,8 @@ class Repository
     @workspace ||= Workspace.new(@git_path.dirname)
   end
 
-  def status 
-    Status.new(self)
+  def status(commit_oid=nil) 
+    Status.new(self, commit_oid)
   end
 
   def migration(tree_diff)
@@ -37,5 +38,9 @@ class Repository
 
   def pending_commit
     PendingCommit.new(@git_path)
+  end
+
+  def hard_reset(oid)
+    HardReset.new(self, oid).execute
   end
 end

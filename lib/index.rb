@@ -235,6 +235,18 @@ class Index
     @parents[path.to_s].to_a 
   end
 
+  # Creates an index entry from a database entry, with no filestat information, since the index 
+  # entry does not mirror a file in the workspace.
+  def add_from_db(pathname, item)
+    store_entry(Entry.create_from_db(pathname, item, 0))
+    @changed = true
+  end
+
+  def clear!
+    clear
+    @changed = true
+  end
+
   private
 
   # Open index file for reading
