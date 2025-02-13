@@ -61,7 +61,7 @@ class Editor
     file.close
     editor_argv = Shellwords.shellsplit(@command) + [@path.to_s]
 
-    if @closed || system(*editor_argv)
+    if !@closed || !system(*editor_argv)
       raise "There was a problem with the editor '#{ @command }'."
     end
 
