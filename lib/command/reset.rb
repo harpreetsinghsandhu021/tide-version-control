@@ -2,13 +2,16 @@ module Command
   class Reset < Base
     
     def run 
-      @head_oid = repo.refs.read_head
-
       select_commit_oid
 
       repo.index.load_for_update
       reset_files
       repo.index.write_updates
+
+      if @args.empty?
+        head_oid = repo.refs.update_head(@commit_oid)
+        repo.refs.update_ref(Refs::ORIG_HEAD, head_oid)
+      end
 
       exit 0
     end

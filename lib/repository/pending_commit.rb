@@ -22,6 +22,9 @@ class Repository
     def clear 
       File.unlink(@head_path)
       File.unlink(@message_path)
+    rescue Errno::ENOENT
+      name = @head_path.basename
+      raise Error, "There is no merge to abort (#{ name } missing)."
     end
 
     # Returns true if a merge is unfinished, which we can detect by checking 

@@ -14,6 +14,8 @@ class Refs
   /x
 
   HEAD = "HEAD"
+  ORIG_HEAD = "ORIG_HEAD" # Stores the original HEAD when resetting the workspace in case 
+  # user wants to move to this head again. 
 
   SymRef = Struct.new(:refs, :path) do 
     def read_oid
@@ -245,6 +247,10 @@ class Refs
 
   def list_all_refs
     [SymRef.new(self, HEAD)] + list_refs(@refs_path)
+  end
+
+  def update_ref(name, oid)
+    update_ref_file(@pathname.join(name), oid)
   end
 
 end
