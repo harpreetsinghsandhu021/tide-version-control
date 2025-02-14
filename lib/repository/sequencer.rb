@@ -2,6 +2,8 @@ class Repository
   class Sequencer
     
     TODO = /^pick (\S+) (.*)$/
+
+    UNSAFE_MESSAGE = "You seem to have moved HEAD. Not rewinding, check your HEAD!"
     
     def initialize(repository)
       @repo = repository
@@ -9,11 +11,27 @@ class Repository
       @todo_path = @pathname.join("todo")
       @todo_file = nil?
       @commands = []
+
+      @head_path = @pathname.join("head")
+      @abort_path = @pathname.join("abort-safety")
     end
 
     def start 
       Dir.mkdir(@pathname)
+
+      head_oid = @repo.refs.read_head
+      write_file(@head_path, head_oid)
+      write_file(@abort_path, head_oid)
+
       open_todo_file
+    end
+
+    def write_file(path, content)
+      lockfile = Lockfile.new(path)
+      lockfile.hold_for_update
+      lockfile.write(content)
+      lockfile.write("\n")
+      lockfile.commit
     end
 
     def pick(commit)
@@ -26,6 +44,7 @@ class Repository
 
     def drop_command
       @commands.shift
+      write_file(@abort_path, @repo.refs.read_head)
     end
 
     def open_todo_file
@@ -61,6 +80,20 @@ class Repository
 
     def quit
       FileUtils.rm_rf(@pathname)
+    end
+
+    def abort
+      head_oid = File.read(@head_path).strip
+      expected = File.read(@abort_path.read_head)
+      actual = @repo.refs.read_head
+
+      quit
+
+      raise UNSAFE_MESSAGE if actual != expected
+
+      @repo.hard_reset(head_oid)
+      orig_head = @repo.refs.update_head(head_oid)
+      @repo.refs.update_ref(Refs::ORIG_HEAD, orig_head)
     end
 
   end
