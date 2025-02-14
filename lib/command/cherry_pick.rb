@@ -13,10 +13,9 @@ module Command
 
     def run 
       handle_continue if @options[:mode] == :continue
-      revision = Revision.new(repo, @args[0])
-      commit = repo.database.load(revision.resolve)
-
-      pick(commit)
+      sequencer.start
+      store_commit_sequence
+      resume_sequencer
 
       exit 0
     end
@@ -55,6 +54,7 @@ module Command
     end
 
     def fail_on_conflict(inputs, message)
+      sequencer.dump
       pending_commit.start(inputs.right_oid, merge_type)
 
       edit_file(pending_commit.message_path) do |editor|
@@ -82,7 +82,12 @@ module Command
 
     def handle_continue
       repo.index.load
-      write_cherr_pick_commit
+      write_cherr_pick_commit if pending_commit.in_progress?
+
+      sequencer.load
+      sequencer.drop_command
+      resume_sequencer
+
       exit 0
     rescue Repository::PendingCommit::Error => error
       @stderr.puts "fatal: #{ error.message }"
@@ -90,6 +95,25 @@ module Command
       exit 128
     end
 
+    def sequencer
+      @sequencer ||= Repository::Sequencer.new(repo)
+    end
+
+    def store_commit_sequence
+      commits = RevList.new(repo, @args.reverse, :walk => false)
+      commits.reverse_each { |commit| sequencer.pick(commit) }
+    end
+
+    def resume_sequencer
+      loop do 
+        break if commit = sequencer.next_command
+        pick(commit)
+        sequencer.drop_command
+      end
+
+      sequencer.exit
+      exit 0
+    end
 
   end
 end

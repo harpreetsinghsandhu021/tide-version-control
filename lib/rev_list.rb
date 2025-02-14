@@ -1,12 +1,24 @@
 require_relative "./revision"
 require_relative "./path_filter"
 
-class RevList 
+class RevList
+  # RevList is responsible for traversing commit history and filtering commits based on various criteria.
+  # It implements Git's revision walking algorithm, which is used in commands like `git log`.
+  #
+  # Key features:
+  # - Traverses commit history in reverse chronological order
+  # - Supports revision range expressions (e.g., "master..feature")
+  # - Handles commit exclusions (e.g., "^commit-id")
+  # - Supports path filtering to show only commits that modify specific files
+  # - Implements history simplification to skip commits that don't change tracked paths
+
+
+  include Enumerable
 
   RANGE = /^(.*)\.\.(.*)$/
   EXCLUDE = /^\^(.+)$/
 
-  def initialize(repo, revs)
+  def initialize(repo, revs, options = {})
     @repo = repo
 
     # Caches every commit that we load.
@@ -32,6 +44,8 @@ class RevList
 
     # Caches the treediffs we calculate.
     @diffs = {}
+
+    @walk = options.fetch(:walk, true)
 
     @filter = PathFilter.build(@prune)
 
@@ -70,8 +84,11 @@ class RevList
     elsif match = RANGE.match(rev)
       set_start_point(match[1], false)
       set_start_point(match[2], true)
+
+      @walk = true
     elsif match = EXCLUDE.match(rev)
       set_start_point(match[1], false)
+      @walk = true
     else 
       set_start_point(rev, true)
     end
@@ -119,8 +136,14 @@ class RevList
     # Finds the first item in the queue whose date is earlier than the new commit
     # and inserts the commit before that item, or at the end of the queue if no such item was found.
     # This keeps the queue ordered in reverse date order
-    index = @queue.find_index { |c| c.date < commit.date }
-    @queue.insert(index || @queue.size, commit)
+    
+    if @walk
+      index = @queue.find_index { |c| c.date < commit.date }
+      @queue.insert(index || @queue.size, commit)
+    else
+      @queue.push(commit)
+    end
+    
   end
 
   # Walks the graph history, yielding all the commits in order
@@ -191,7 +214,10 @@ class RevList
   # Adds the parents of a given commit to the processing queue
   # prevents re-processing of the same commit and handles marking parents as uninteresting if needed
   def add_parents(commit)
-    return if !mark(commit.oid, :added) # check the mark to see if its added before to prevent reprocessing
+    # check the mark to see if its added before to prevent reprocessing.
+    # check the @walk to prevent RevList iterating over all the commits reachable from the inputs
+    # and will yield only the inputs themselves.
+    return if !@walk && !mark(commit.oid, :added) 
 
     if marked?(commit.oid, :uninteresting)
       parents = commit.parents.map { |oid| load_commit(oid) }
