@@ -8,6 +8,14 @@ module Command
       fatal: Exiting because of an unresolved conflict.
     MSG
 
+    CHERRY_PICK_NOTES = <<~MSG
+    It looks like you may be commit a cherry-pick.
+    If this is not correct, please remove the file
+    \t.git/CHERRY_PICK_HEAD
+    and try again.
+    MSG
+
+
     MERGE_NOTES = <<~MSG
     It looks like you may be committing a merge.
     If this is not correct, please remove the file
@@ -39,7 +47,16 @@ module Command
     end
 
     # Write a merge commit using the stored state. 
-    def resume_merge
+    def resume_merge(type)
+      case type
+      when :merge then write_merge_commit
+      when :cherry_pick then write_cherr_pick_commit
+      end
+
+      exit 0
+    end
+
+    def write_merge_commit
       handle_conflicted_index
       parents = [repo.refs.read_head, pending_commit.merge_oid]
       message = compose_merge_message(MERGE_NOTES)
@@ -47,6 +64,20 @@ module Command
 
       pending_commit.clear
       exit 0
+    end
+
+    def write_cherr_pick_commit
+      handle_conflicted_index
+
+      parents = [repo.refs.read_head]
+      message = compose_merge_message(CHERRY_PICK_NOTES)
+      pick_oid = pending_commit.merge_oid(:cherry_pick)
+      commit = repo.database.load(pick_oid)
+
+      picked = Database::Commit.new(parents, write_tree.oid, commit.author, message)
+      repo.database.store(picked)
+      repo.refs.update_head(picked.oid)
+      pending_commit.clear(:cherry_pick)
     end
 
     def compose_merge_message(notes=nil)

@@ -19,7 +19,9 @@ module Command
     
     def run  
       repo.index.load
-      resume_merge if pending_commit.in_progress?
+
+      merge_type = pending_commit.merge_type
+      resume_merge(merge_type) if merge_type
       root = Database::Tree.build(repo.index.each_entry)
       root.traverse { |tree| repo.database.store(tree) }
 
