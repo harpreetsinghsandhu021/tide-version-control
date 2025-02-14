@@ -35,7 +35,11 @@ class Repository
     end
 
     def pick(commit)
-      @commands.push(commit)
+      @commands.push([:pick, commit])
+    end
+
+    def revert(commit)
+      @commands.push([:revert, commit])
     end
 
     def next_command
@@ -57,13 +61,12 @@ class Repository
     def dump
       return if !@todo_file
 
-      @commands.each do |commit|
+      @commands.each do |action, commit|
         short = @repo.database.short_oid(commit.oid)
-        @todo_file.write("pick #{ short } #{ commit.title_line }")
+        @todo_file.write("#{ action } #{ short } #{ commit.title_line }")
       end
 
       @todo_file.commit
-
     end
 
     def load
@@ -72,9 +75,11 @@ class Repository
       return if !File.file?(@todo_path)
 
       @commands = File.read(@todo_path).lines.map do |line|
-        oid, _ = TODO.match(line).captures
+        action, oid, _ = TODO.match(line).captures
         oids = @repo.database.prefix_match(oid)
         @repo.database.load(oids.first)
+
+        [action.to_sym, commit]
       end
     end
 

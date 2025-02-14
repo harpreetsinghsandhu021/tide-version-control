@@ -8,7 +8,8 @@ class Repository
 
     HEAD_FILES = {
       :merge => "MERGE_HEAD", 
-      :cherr_pick => "CHERRY_PICK_HEAD"
+      :cherry_pick => "CHERRY_PICK_HEAD", 
+      :revert => "REVERT_HEAD"
     }
 
     attr_reader :message_path
