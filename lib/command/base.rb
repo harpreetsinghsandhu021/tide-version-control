@@ -91,6 +91,12 @@ module Command
       @parser.parse!(@args)
     end
 
+    def editor_command
+      core_editor = repo.config.get(["core", "editor"])
+      @env["GIT_EDITOR"] || core_editor || @env["VISUAL"] || @env["EDITOR"]
+    end
+
+
     def define_options
       
     end

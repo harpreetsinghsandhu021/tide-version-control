@@ -6,6 +6,7 @@ require_relative "./repository/migration"
 require_relative './repository/status'
 require_relative "./repository/pending_commit"
 require_relative "./repository/hard_reset"
+require_relative "./config/stack"
 
 class Repository
   attr_reader :git_path
@@ -44,5 +45,9 @@ class Repository
 
   def hard_reset(oid)
     HardReset.new(self, oid).execute
+  end
+
+  def config 
+    @config ||= Stack.new(@git_path)
   end
 end
