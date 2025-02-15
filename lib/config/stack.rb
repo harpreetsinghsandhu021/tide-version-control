@@ -12,7 +12,6 @@ require_relative "../config"
     # Initializes a new configuration stack with local, global and system configs
     # @param git_path [Pathname] The path to the git repository
     def initialize(git_path)
-      puts git_path
       @configs = {
         :local => Config.new(git_path.join("config")), 
         :global => Config.new(Pathname.new(GLOABAL_CONFIG)), 

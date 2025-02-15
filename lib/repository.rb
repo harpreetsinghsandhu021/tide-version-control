@@ -2,6 +2,7 @@ require_relative './database'
 require_relative './index'
 require_relative './refs'
 require_relative './workspace'
+require_relative './remotes'
 require_relative "./repository/migration"
 require_relative './repository/status'
 require_relative "./repository/pending_commit"
@@ -49,5 +50,9 @@ class Repository
 
   def config 
     @config ||= Stack.new(@git_path)
+  end
+
+  def remotes 
+    @remotes ||= Remotes.new(config.file(:local))
   end
 end

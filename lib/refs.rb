@@ -13,9 +13,14 @@ class Refs
   | [\x00-\x20*:?\[\\^~\x7f]
   /x
 
+
   HEAD = "HEAD"
   ORIG_HEAD = "ORIG_HEAD" # Stores the original HEAD when resetting the workspace in case 
   # user wants to move to this head again. 
+  
+  REFS_DIR = Pathname.new("refs")
+  HEADS_DIR = REFS_DIR.join("heads")
+  REMOTES_DIR = REFS_DIR.join("remotes")
 
   SymRef = Struct.new(:refs, :path) do 
     def read_oid
@@ -43,8 +48,9 @@ class Refs
   # @param pathname [Pathname] Path to .git directory
   def initialize(pathname)
     @pathname = pathname
-    @refs_path = @pathname.join("refs")
-    @heads_path = @refs_path.join("heads")
+    @refs_path = @pathname.join(REFS_DIR)
+    @heads_path = @refs_path.join(HEADS_DIR)
+    @remotes_path = @pathname.join(REMOTES_DIR)
   end
 
   # Update HEAD reference with new commit OID
@@ -122,7 +128,7 @@ class Refs
   end
 
   def path_for_name(name)
-    prefixes = [@pathname, @refs_path, @heads_path]
+    prefixes = [@pathname, @refs_path, @heads_path, @remotes_path]
     prefix = prefixes.find { |path| File.file? path.join(name) }
 
     prefix ? prefix.join(name) : nil
@@ -198,11 +204,12 @@ class Refs
   def short_name(path)
     path = @pathname.join(path)
 
-    prefix = [@heads_path, @pathname].find do |dir|
+    prefix = [@remotes_path, @heads_path, @pathname].find do |dir|
       path.dirname.ascend.any? { |parent| parent == dir }
     end
 
-    path.relative_path_from(prefix).to_s
+    path = path.relative_path_from(prefix) if prefix
+    path.to_s
   end
 
   def delete_branch(branch_name)
