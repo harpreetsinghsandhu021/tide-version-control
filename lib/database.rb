@@ -16,6 +16,8 @@ class Database
     "commit" => Commit
   }
 
+  Raw = Struct.new(:type, :size, :data)
+
   # Characters used for generating temporary filenames
   TEMP_CHARS = ("a".."z").to_a + ("A".."Z").to_a + ("0".."9").to_a
 
@@ -122,6 +124,15 @@ class Database
     Entry.new(oid, Tree::TREE_MODE)
   end
 
+  # Same as load method, except this skips the work of parsing 
+  # the object into a Commit, Tree or Blob. That’s because Pack::Writer just wants to write the
+  # serialised object directly to the output stream and doesn’t actually care about its type or internal
+  # structure — it’s just a blob of data.So it would be pointless to parse the object only to re-serialise it
+  def load_raw(oid)
+    type, size, scanner = read_object_header(oid)
+    Raw.new(type, size, scanner.rest)
+  end
+
 
   private
 
@@ -180,20 +191,29 @@ class Database
 
 
   def read_object(oid)
+   type, _, scanner = read_object_header(oid)
+
+   object = TYPES[type].parse(scanner)
+   object.oid = oid
+
+   object
+  end
+
+  def read_object_header(oid, read_bytes = nil)
+    path = object_path(oid)
+
     # Reads the object from disk and then decompress it using zlib
-    data = Zlib::Inflate.inflate(File.read(object_path(oid)))
+    data = Zlib::Inflate.inflate(File.read(path, read_bytes))
     # creates a StringScanner instance which can be used for parsing data
     scanner = StringScanner.new(data)
-
+ 
     # use stringscanner to scan_until we find a space, giving us the object`s type
     type = scanner.scan_until(/ /).strip
     # scan_until we find a null byte, giving us the size
-    _size = scanner.scan_until(/\0/)[0..-2]
+    size = scanner.scan_until(/\0/)[0..-2].to_i
 
-    object = TYPES[type].parse(scanner) # process the rest of the data
-    object.oid = oid # attach the given object ID to the object
-
-    object
+    [type, size, scanner]
+ 
   end
 
  
