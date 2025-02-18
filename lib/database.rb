@@ -118,6 +118,10 @@ class Database
     end
   end
 
+  def tree_entry(oid)
+    Entry.new(oid, Tree::TREE_MODE)
+  end
+
 
   private
 

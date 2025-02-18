@@ -21,6 +21,9 @@ class RevList
   def initialize(repo, revs, options = {})
     @repo = repo
 
+    # Stores the root tree IDS of any commits encountered during history traversal.
+    @pending = []
+
     # Caches every commit that we load.
     # It will initially prevent re-loading data we already have.
     # It will help us locate commits we`ve loaded whose information needs to be updated.
@@ -45,24 +48,32 @@ class RevList
     # Caches the treediffs we calculate.
     @diffs = {}
 
+    # Disabled by default, Controls whether the the class should return only commit informations
+    # or include associated objects(like files in the commits).
+    @objects = options.fetch(:objects, false)
     @walk = options.fetch(:walk, true)
 
+    @missing = options.fetch(:missing, false)
     @filter = PathFilter.build(@prune)
+
+    include_refs(repo.refs.list_all_refs) if options[:all]
 
     revs.each { |rev| handle_revision(rev) }
 
     handle_revision(Revision::HEAD) if @queue.empty?
   end
 
-  # def each 
-  #   oid = Revision.new(@repo, @start). resolve(Revision::COMMIT)
+  def include_refs(refs)
+    oids = refs.map(&:read_oid).compact
+    oids.each { |oid| handle_revision(oid) }
+  end
 
-  #   while oid 
-  #     commit = @repo.database.load(oid)
-  #     yield commit
-  #     oid = commit.parent
-  #   end
-  # end
+  def set_start_point(rev, interesting)
+    rev = Revision::HEAD if rev == ""
+    oid = Revision.new(@repo, rev).resolve(Revision::COMMIT)
+  rescue Revision::InvalidObject => error
+    raise error if !@missing
+  end
 
   # Adds a flag to a given commit ID using Set.add which returns true only if the 
   # flag was not already in the commit`s set
@@ -149,8 +160,10 @@ class RevList
   # Walks the graph history, yielding all the commits in order
   def each 
     limit_list if @limited
+    mark_edges_uninteresting if @objects
     traverse_commits { |commit| yield commit }
-  end
+    traverse_pending { |object| yield object }
+  end 
 
   # Limits the revision list based on uninteresting commits
   # Modifies the @queue to only contain commits that are 
@@ -171,6 +184,43 @@ class RevList
     # Replace the queue with the filteres output list, which now contains only the interesting 
     # commits in reverse chronlogical order
     @queue = @output
+  end
+
+  def mark_edges_uninteresting
+    # Iterate over each commit in the @queue.
+    @queue.each do |commit|
+
+      # Check if the current commit is marked as "uninteresting".
+      # An "uninteresting" commit is likely the one that the reciever of the packfile already has.
+      if marked?(commit.oid, :uninteresting)
+        mark_tree_uninteresting(commit.tree) # If the commit is uninteresting, mark its entire tree as uninteresting as well
+                                              # This is because if the commit is uninteresting, the receiver likely already has all the files from that commit.
+      end
+
+      # Iterate over each parent of the current commit
+      commit.parents.each do |oid|
+        next unless marked?(oid, :uninteresting)
+        parent = load_commit(oid) # If the parent is uninteresting, load the full commit object.
+        mark_tree_uninteresting(parent.tree) # Mark the tree of the uninteresting parent commit as uninteresting.
+      end
+      
+    end
+  end
+
+  def mark_tree_uninteresting(tree_oid)
+    entry = @repo.database.tree_entry(tree_oid)
+    traverse_tree(entry) { |object| mark(object.oid, :uninteresting)}
+  end
+
+  def traverse_tree(entry)
+    return if !yield entry
+    return if !entry.tree?
+
+    tree = @repo.database.load(entry.oid)
+
+    tree.entries.each do |name, item|
+      traverse_tree(item) { |object| yield object}
+    end
   end
 
   # Checks if there are still potentially interesting commits to be processed in the queue
@@ -206,10 +256,26 @@ class RevList
       next if marked?(commit.oid, :uninteresting) # Skip if the commit is marked as uninteresting
       next if marked?(commit.oid, :treesame) # Skip if the commit tree is same as parent commit tree
 
+      @pending.push(@repo.database.tree_entry(commit.tree)) # Push the tree entry into the @pending array
+
       yield commit
     end
   end
 
+  # Emits all the pending trees and blobs to the caller
+  def traverse_pending
+    return if !@objects
+
+    @pending.each do |entry|
+      traverse_tree(entry) do |object|
+        next if marked?(object.oid, :uninteresting)
+        next if !mark(object.oid, :seen)
+
+        yield object
+        true
+      end
+    end
+  end
 
   # Adds the parents of a given commit to the processing queue
   # prevents re-processing of the same commit and handles marking parents as uninteresting if needed
