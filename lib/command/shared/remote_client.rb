@@ -8,11 +8,6 @@ module Command
   # RemoteClient module provides functionality for establishing and managing
   # connections with remote Git processes/agents
   module RemoteClient
-
-
-    REF_LINE = /^([0-9a-f]+) (.*)$/
-    ZERO_OID = "0" * 40
-
     # Initiates a connection with a remote agent process
     # @param name [String] The identifier for the agent
     # @param program [String] The command/program to execute
@@ -45,16 +40,54 @@ module Command
       Shellwords.shellsplit(program) + [uri.path]
     end
 
-    # Reads the refs sent by the remote agent, storing them in a hash mapping ref names 
-    # to commit IDs.
-    def recv_references
-      @remote_refs = {}
+    def report_ref_update(ref_names, error, old_oid = nil, new_oid = nil, is_ff=false)
+      # First handle error cases - show rejection message if there's an error
+      return show_ref_update("!", "[rejected]", ref_names, error) if error
+      # Skip if old and new commits are identical (no change)
+      return if old_oid == new_oid
 
-      @conn.recv_until(nil) do |line|
-        oid, ref = REF_LINE.match(line).captures
-        @remote_refs[ref] = oid.downcase if oid != ZERO_OID
+      # Handle special cases:
+      if old_oid == nil
+        # New branch creation - no previous commit
+        show_ref_update("*", "[new branch]", ref_names)
+      elsif new_oid == nil
+        # Branch deletion - no new commit
+        show_ref_update("-", "[deleted]", ref_names)
+      else
+        # Normal update case - show range of commits changed
+        report_range_update(ref_names, old_oid, new_oid, is_ff)
       end
     end
+
+    def report_range_update(ref_names, old_oid, new_oid, is_ff)
+      # Convert full commit IDs to shortened display format
+      old_oid = repo.database.short_oid(old_oid)
+      new_oid = repo.database.short_oid(new_oid)
+
+      if is_ff
+        # Fast-forward update - show direct commit range with ..
+        revisions = "#{ old_oid }..#{ new_oid }"
+        show_ref_update(" ", revisions, ref_names)
+      else
+        # Non-fast-forward update - show divergent range with ...
+        revisions = "#{ old_oid }...#{ new_oid }"
+        show_ref_update("+", revisions, ref_names, "forced update")
+      end
+    end
+
+    def show_ref_update(flag, summary, ref_names, reason=nil)
+      # Convert reference names to their short format for display
+      names = ref_names.compact.map { |name| repo.refs.short_name(name) }
+
+      # Build the status message with format: " flag summary source -> target"
+      message = " #{ flag } #{ summary } #{ names.join(" -> ") }"
+      # Add reason in parentheses if one was provided
+      message.concat(" (#{ reason })") if reason
+
+      # Output the formatted message to stderr
+      @stderr.puts message
+    end
+
 
   end
 end

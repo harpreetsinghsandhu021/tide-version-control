@@ -3,12 +3,12 @@ require "digest/sha1"
 module Pack
   class Stream 
     
-    def initialize(input)
+    def initialize(input, buffer = "")
       @input = input
       @digest = Digest::SHA1.new
       @offset = 0
 
-      @buffer = new_byte_string # Stores data that`s already been fetched from the underlying IO.
+      @buffer = new_byte_string.concat(buffer) # Stores data that`s already been fetched from the underlying IO.
       @capture = nil # Holds data for the object being parsed, any access can be moved to @buffer for later.
     end
 

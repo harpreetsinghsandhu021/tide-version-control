@@ -133,6 +133,10 @@ class Database
     Raw.new(type, size, scanner.rest)
   end
 
+  def has?(oid)
+    File.file?(object_path(oid))
+  end
+
 
   private
 
