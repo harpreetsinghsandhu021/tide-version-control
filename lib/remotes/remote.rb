@@ -74,6 +74,13 @@ class Remotes
       mappings # e.g., {"refs/remotes/origin/main"=>["refs/heads/main", false], "refs/remotes/origin/feature"=>["refs/heads/feature", false]}
     end
 
+    def push_specs
+      @config.get_all(["remote", @name, "push"])
+    end
+
+    def receiver
+      @config.get(["remote", @name, "receivepack"])
+    end
 
   end
 

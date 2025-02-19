@@ -37,7 +37,20 @@ module Command
       uri = URI.parse(url)
       
       # Split the program into shell arguments and append the path component of the URL
-      Shellwords.shellsplit(program) + [uri.path]
+      argv = Shellwords.shellsplit(program) + [uri.path]
+
+      case uri.scheme
+      when "file" then argv
+      when "ssh" then ssh_command(uri, argv)
+      end
+    end
+
+    def ssh_command(uri, argv)
+      ssh = ["ssh", uri.host]
+      ssh += ["-p", uri.port.to_s] if uri.port 
+      ssh += ["-l", uri.user] if uri.user
+
+      ssh + [Shellwords.shelljoin(argv)]
     end
 
     def report_ref_update(ref_names, error, old_oid = nil, new_oid = nil, is_ff=false)
