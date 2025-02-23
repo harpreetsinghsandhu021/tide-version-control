@@ -18,6 +18,8 @@ class Refs
   ORIG_HEAD = "ORIG_HEAD" # Stores the original HEAD when resetting the workspace in case 
   # user wants to move to this head again. 
   
+  StaleValue = Class.new(StandardError)
+  
   REFS_DIR = Pathname.new("refs")
   HEADS_DIR = REFS_DIR.join("heads")
   REMOTES_DIR = REFS_DIR.join("remotes")
@@ -92,14 +94,29 @@ class Refs
   def update_ref_file(path, oid)
     lockfile = Lockfile.new(path)
 
-    lockfile.hold_for_update
-    lockfile.write(oid)
-    lockfile.write("\n")
-    lockfile.commit
+    lockfile.hold_for_update 
+
+    yield if block_given?
+
+    if oid 
+      write_lockfile(lockfile, oid)
+    else
+      File.unlink(path) rescue Errno::ENOENT
+      lockfile.rollback
+    end
 
   rescue Lockfile::MissingParent
     FileUtils.mkdir_p(path.dirname)
     retry
+  rescue => error
+    lockfile.rollback
+    raise error
+  end
+
+  def write_lockfile(lockfile, oid)
+    lockfile.write(oid)
+    lockfile.write("\n")
+    lockfile.commit
   end
 
   def update_symref(path, oid)
@@ -258,6 +275,25 @@ class Refs
 
   def update_ref(name, oid)
     update_ref_file(@pathname.join(name), oid)
+  end
+
+  # Atomically updates a reference only if it hasn't changed
+  # @param name [String] Name of the reference to update
+  # @param old_oid [String, nil] Expected current commit ID
+  # @param new_oid [String, nil] New commit ID to set
+  # @raise [StaleValue] If reference value changed since last read
+  def compare_and_swap(name, old_oid, new_oid)
+    # Convert reference name to filesystem path
+    path = @pathname.join(name)
+
+    update_ref_file(path, new_oid) do 
+      # Atomic update: Only proceed if nobody else modified the ref
+      # Compare current value with what we expect it to be
+      unless old_oid == read_symref(path)
+        # Someone changed the ref while we weren't looking - abort
+        raise StaleValue, "value of #{ name } changes since last read"
+      end
+    end
   end
 
 end
