@@ -3,7 +3,7 @@ class Remotes
   # + (optional) indicates force update
   # source is required
   # :target is optional
-  REFSPEC_FORMAT = /^(\+?)([^:]*)(:([^:]*))?$/
+  REFSPEC_FORMAT = /^(\+?)([^:]+):([^:]+)$/
 
   # Represents a Git refspec which maps source refs to target refs
   # and tracks whether updates should be forced

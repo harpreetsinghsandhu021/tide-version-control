@@ -1,3 +1,7 @@
+require_relative "./remotes/refspec"
+require_relative "./remotes/remote"
+require_relative "./refs"
+
 # Manages remote repository configurations and operations
 # This class handles the creation, deletion, and querying of git remotes
 # Similar to git's remote repository management system

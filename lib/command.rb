@@ -7,6 +7,8 @@ require_relative './command/branch'
 require_relative './command/checkout'
 require_relative './command/log'
 require_relative './command/rm'
+require_relative './command/config'
+require_relative './command/remote'
 
 module Command 
   Unknown = Class.new(StandardError)
@@ -21,6 +23,8 @@ module Command
     "checkout"=> Checkout, 
     "log" => Log, 
     "rm" => Rm,
+    "config" => Config, 
+    "remote" => Remote, 
   }
 
   def self.execute(dir, env, argv, stdin, stdout, stderr)

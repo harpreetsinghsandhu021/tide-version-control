@@ -31,10 +31,10 @@ class Config
     def self.serialize(name, value)
       "\t#{ name } = #{ value }\n"
     end
+  end
 
-    def self.valid_key?(key)
-      VALID_SECTION =~ key.first && VALID_VARIABLE =~ key.last
-    end
+  def self.valid_key?(key)
+    VALID_SECTION =~ key.first && VALID_VARIABLE =~ key.last
   end
 
   # Represents a configuration section with hierarchical naming support
@@ -149,7 +149,7 @@ class Config
   def line_count
     # Calculate total number of lines across all sections
     # Reduces each section's line count into a single sum
-    @lines.each_value.reduce(O) { |n, lines| n + lines.size }
+    @lines.each_value.reduce(0) { |n, lines| n + lines.size }
   end 
 
   def parse_value(value)

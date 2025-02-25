@@ -1,7 +1,7 @@
 require_relative "./base"
 
 
-class Command
+module Command
   class Config < Base
     
     def define_options
@@ -32,7 +32,7 @@ class Command
       unset_all if @options[:unset_all]
       remove_section if @options[:remove_section]
 
-      key, value = parse_key(args[0]), args[1]
+      key, value = parse_key(@args[0]), @args[1]
 
       if value
         edit_config { |config|config.set(key, value)}
@@ -84,12 +84,12 @@ class Command
 
     def add_variable
       key = parse_key(@options[:add])
-      edit_config { |config| config.add(key, args[0])}
+      edit_config { |config| config.add(key, @args[0])}
     end
 
     def replace_variable
       key = parse_key(@options[:replace])
-      edit_config { |config| config.replace_all(key, args[0])}
+      edit_config { |config| config.replace_all(key, @args[0])}
     end
 
     def unset_single
