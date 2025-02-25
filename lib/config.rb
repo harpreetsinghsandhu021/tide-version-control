@@ -8,6 +8,9 @@ class Config
   BLANK_LINE = /\A\s*(\Z|#|;)/
   INTEGER = /\A-?[1-9][0-9]*\Z/
 
+  VALID_SECTION  = /^[a-z0-9-]+$/i
+  VALID_VARIABLE = /^[a-z][a-z0-9-]*$/i
+
   ParseError = Class.new(StandardError)
   Conflict = Class.new(StandardError)
 
@@ -27,6 +30,10 @@ class Config
     # @return [String] formatted config line with indentation
     def self.serialize(name, value)
       "\t#{ name } = #{ value }\n"
+    end
+
+    def self.valid_key?(key)
+      VALID_SECTION =~ key.first && VALID_VARIABLE =~ key.last
     end
   end
 
