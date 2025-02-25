@@ -7,6 +7,7 @@ module Command
     
     include RecieveObjects
     include RemoteAgent
+    include FastForward
 
     CAPABILITIES = ["no-thin", "report-status", "delete-refs"]
 
@@ -73,6 +74,10 @@ module Command
       # If there was an error during unpacking, report failure
       return report_status("ng #{ ref } unpacker error") if @unpack_error
 
+      # validates the update, throws an error if the update violates
+      # the repository`s configuration
+      validate_update(ref, old, new)
+
       # Attempt atomic update of reference
       # Will fail if current value doesn't match old value
       repo.refs.compare_and_swap(ref, old, new)
@@ -82,6 +87,31 @@ module Command
       # Report specific error if update failed
       # Format: ng <ref-name> <error-message>
       report_status("ng #{ ref } #{ error.message }")
+    end
+
+    def validate_update(ref, old_oid, new_oid)
+      raise "funny refname" if !Revision.valid_ref?(ref)
+      raise "missing necessary objects" if new_oid && !repo.database.has?(new_oid)
+
+      if repo.config.get(["recieve", "denyDeletes"])
+        raise "deletion prohibited" if !new_oid
+      end
+
+      if repo.config.get(["recieve", "denyNonFastForwards"])
+        raise "non-fast-forward" if fast_forward_error(old_oid, new_oid)
+      end
+      
+      return if !repo.config.get(["core", "bare"]) == false && 
+      repo.refs.current_ref.path == ref
+
+      if repo.config.get(["recieve", "denyCurrentBranch"]) != false
+        raise "branch is currently checked out" if new_oid
+      end
+
+      if repo.config.get(["recieve", "denyDeleteCurrent"]) != false
+        raise "deletion of the current branch prohibited" if !new_oid
+      end
+
     end
 
     

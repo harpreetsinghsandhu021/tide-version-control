@@ -15,6 +15,8 @@ module Pack
       @database = database
 
       @compression = options.fetch(:compression, Zlib::DEFAULT_COMPRESSION)
+      @progress = options[:progress]
+      @offset = 0
     end
 
     private
@@ -22,6 +24,7 @@ module Pack
     def write(data)
       @output.write(data)
       @digest.update(data)
+      @offset += data.bytesize
     end
     
     def write_objects(rev_list)
@@ -33,7 +36,15 @@ module Pack
 
     def prepare_pack_list(rev_list)
       @pack_list = []
-      rev_list.each { |object| add_to_pack_list(object) }
+
+      @progress&.start("Counting objects")
+
+      rev_list.each do |object, path|
+        add_to_pack_list(object, path)
+        @progress&.tick
+      end
+
+      @progress&.stop
     end
 
     def add_to_pack_list(object)
@@ -52,7 +63,12 @@ module Pack
     end
 
     def write_entries
+
+      count = @pack_list.size
+      @progress&.start("Writing objects", count) if @output != STDOUT
+
       @pack_list.each { |entry| write_entry(entry) }
+      @progress&.stop
     end
 
     # Writes a Git object entry to the packfile.
@@ -69,6 +85,8 @@ module Pack
       # Compress the object`s data using Zlib deflation with the specified compression level.
       # and write compressed data to the packfile.
       write(Zlib::Deflate.deflate(object.data, @compression))
+
+      @progress&.tick(@offset)
     end
 
 

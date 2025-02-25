@@ -22,7 +22,7 @@ module Command
 
       # Configure pack writer with compression settings
       write_opts = { :compression => pack_compresssion }
-      writer = Pack::Writer.new(@conn.output, repo.database, write_opts)
+      writer = Pack::Writer.new(@conn.output, repo.database, :compression => pack_compresssion, :progress => Progress.new(@stderr))
 
       # Write all objects from the revision list to the pack
       writer.write_objects(rev_list)
