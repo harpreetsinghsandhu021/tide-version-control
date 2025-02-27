@@ -9,6 +9,7 @@ require_relative './command/log'
 require_relative './command/rm'
 require_relative './command/config'
 require_relative './command/remote'
+require_relative './command/push'
 
 module Command 
   Unknown = Class.new(StandardError)
@@ -25,6 +26,7 @@ module Command
     "rm" => Rm,
     "config" => Config, 
     "remote" => Remote, 
+    "push" => Push, 
   }
 
   def self.execute(dir, env, argv, stdin, stdout, stderr)

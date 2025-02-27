@@ -92,7 +92,7 @@ class Config
     @lines = Hash.new { |hash, key| hash[key] = []}
     section = Section.new([])
 
-    File.open(@path, File::Constants::RDONLY) do |file|
+    File.open(@path, File::RDONLY) do |file|
       until file.eof?
         line = parse_line(section, read_line(file)) 
         section = line.section
@@ -112,6 +112,7 @@ class Config
 
     loop do 
       buffer.concat(file.readline)
+      puts buffer
       return buffer if !buffer.end_with?("\\\n")
     end
   end
@@ -128,6 +129,8 @@ class Config
   # or a blank line.
   def parse_line(section, line)
     # Try to match line against section header pattern
+    
+
     if match = SECTION_LINE.match(line)
       # Create new section if match found, combining primary name and optional subsection
       section = Section.new([match[1], match[3]].compact)
@@ -145,6 +148,7 @@ class Config
       raise ParseError, message
     end
   end
+  
 
   def line_count
     # Calculate total number of lines across all sections
@@ -367,7 +371,7 @@ class Config
   # Checks if a section exists in the configuration
   # @param key [Array<String>] the section identifier to check
   # @return [Boolean] true if section exists, false otherwise
-  def Section?(key)
+  def section?(key)
     key = Section.normalize(key)
     @lines.has_key?(key)
   end

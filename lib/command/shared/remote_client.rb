@@ -8,6 +8,10 @@ module Command
   # RemoteClient module provides functionality for establishing and managing
   # connections with remote Git processes/agents
   module RemoteClient
+
+    REF_LINE = /^([0-9a-f]+) (.*)$/
+    ZERO_OID = "0" * 40
+
     # Initiates a connection with a remote agent process
     # @param name [String] The identifier for the agent
     # @param program [String] The command/program to execute
@@ -18,6 +22,8 @@ module Command
       # Convert the program and URL into a properly formatted shell command
       argv = build_agent_command(program, url)
       
+       puts "Executing: #{Shellwords.shelljoin(argv)}"
+
       # Open a bidirectional pipe to the agent process
       # input: Write to the process
       # output: Read from the process
@@ -35,6 +41,8 @@ module Command
     def build_agent_command(program, url)
       # Parse the URL to extract its components
       uri = URI.parse(url)
+
+      program = program || ""
       
       # Split the program into shell arguments and append the path component of the URL
       argv = Shellwords.shellsplit(program) + [uri.path]

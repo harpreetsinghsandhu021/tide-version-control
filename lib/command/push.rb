@@ -40,7 +40,7 @@ module Command
 
     def configure 
       name = @args.fetch(0, Remotes::DEFAULT_REMOTE)
-      remote = repo.remote.get(name)
+      remote = repo.remotes.get(name)
 
       @push_url = remote&.push_url || @args[0]
       @fetch_specs = remote&.fetch_specs || []
