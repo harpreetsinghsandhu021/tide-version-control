@@ -21,11 +21,23 @@ module Pack
         # This converts the array of bytes into a binary string.
         bytes.pack("C*")
       end  
+
+      def self.parse(input, byte)
+        value = Numbers::PackedInt56LE.read(input, byte)
+        offset = value & 0xffffffff
+        size = value >> 32
+
+        Copy.new(offset, size)
+      end
     end
 
     Insert = Struct.new(:data) do 
       def to_s
         [data.bytesize, data].pack("Ca")
+      end
+
+      def self.parse(input, byte)
+        Insert.new(input.read(byte))
       end
     end
 
