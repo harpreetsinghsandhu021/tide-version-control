@@ -12,16 +12,14 @@ module Pack
       #
       # Arguments:
       #   value: The integer to be encoded.
-      #
+      #   shuft: The initial bit shift amount
       # Returns:
       #   bytes: An array of bytes representing the encoded integer.
       
 
-      def self.write(value)
+      def self.write(value, shift)
         bytes = []
-        mask = 0xf # Bitmask to extract the least significant 4 digits.
-
-        shift = 4 # Set the initial bit shift amount to 4.
+        mask = 2 ** shift - 1 # Bitmask to extract the least significant 4 digits.
 
         until value <= mask
           # First, value & mask: This performs a bitwise AND between
@@ -53,16 +51,12 @@ module Pack
       # indicates if there are more bytes to follow.
       # 
       # Returns a tuple: [first_byte, decoded_value]
-      def self.read(input)
+      def self.read(input, shift)
         # Read the first byte from the input stream
         first = input.readByte 
 
         # Extract the lower 4 bits of the first byte. This gives us the initial value.
-        value = first & 0xf  
-
-        # Initialize the bit shift amount. We start by shifting 4 bits 
-        # because the first byte only uses the lower 4 bits for the value.
-        shift = 4 
+        value = first & (2 ** shift - 1)  
 
         # Store the current byte being processed (starts with the first byte)
         byte = first 
@@ -89,5 +83,39 @@ module Pack
       end
 
     end
+
+    module PackedInt56LE
+      # This module handles the 56-bit (7-byte) variable-length encoding used in Git's delta compression.
+      
+      # Converts a number into packed byte format.
+      def self.write(value)
+        bytes = [0] # Initialize with header byte (set to 0)
+
+        (0...7).each do |i| # Loop through possible 7 byte positions.
+          byte = (value >> (8 * i)) & 0xff # Extract the i-th byte of the value.
+          next if byte == 0 # Skip if byte is zero.
+
+          byte[0] |= 1 << i # Set the corresponding bit in header.
+          bytes.push(byte) # Add the non-zero byte to the result.
+        end
+
+        bytes
+      end
+
+      # Converts a packed byte format into a number.
+      def self.read(input, header)
+        value = 0
+
+        (0...7).each do |i|
+          next if header & (1 << i) == 0 # Skip if bit not set in header.
+          value |= input.readbyte << (8 * i) # Read byte and place at position 1. 
+        end
+        
+        value
+      end
+
+
+    end
+
   end
 end

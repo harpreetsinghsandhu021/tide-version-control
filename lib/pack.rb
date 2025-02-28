@@ -15,6 +15,9 @@ module Pack
     "blob" => BLOB
   }
 
+  MAX_COPY_SIZE = 0xffffff # Maximum space allocated for the size of copy operation i.e 3 bytes
+  MAX_INSERT_SIZE = 0x7f # Maximum space allocated for the size of inser operation i.e 7 bits
+
   Record = Struct.new(:type, :data) do 
     attr_accessor :oid
 

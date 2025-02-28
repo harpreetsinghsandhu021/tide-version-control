@@ -112,7 +112,7 @@ class Config
 
     loop do 
       buffer.concat(file.readline)
-      puts buffer
+      # puts buffer
       return buffer if !buffer.end_with?("\\\n")
     end
   end
