@@ -103,7 +103,8 @@ module Command
     end
 
     def recv_objects
-      recv_packed_objects(Pack::SIGNATURE)
+      unpack_limit = repo.config.get(["fetch", "unpackLimit"])
+      recv_packed_objects(unpack_limit,Pack::SIGNATURE)
     end
 
     # Updates all remote references after fetching objects

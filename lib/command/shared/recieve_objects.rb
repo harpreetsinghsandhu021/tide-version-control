@@ -14,7 +14,7 @@ module Command
     # - Reads pack header and validates format
     # - Processes each object and stores it in the repository
     # - Verifies pack checksum for data integrity
-    def recv_packed_objects(prefix = "")
+    def recv_packed_objects(unpack_limit=nil,prefix = "")
       # Initialize pack stream reader for incoming data
       stream = Pack::Stream.new(@conn.input, prefix)
       reader = Pack::Reader.new(stream)
@@ -25,23 +25,23 @@ module Command
       # Read and validate pack header
       reader.read_header
 
-      unpacker = Pack::Unpacker.new(repo.database, reader, stream, progress)
-      unpacker.process_pack
-
-      # progress&.start("Unpacking objects", reader.count)
-      
-      # # Process each object in the pack
-      # reader.count.times do 
-      #   # Capture and store each object record
-      #   record, _ = stream.capture { reader.read_record }
-      #   repo.database.store(record)
-      #   progress&.tick(stream.offset)
-      # end
-      # progress&.stop
-
-      # # Verify pack integrity using checksum
-      # stream.verify_checksum
+     factory = select_processor_class(reader, unpack_limit)
+     processor = factory.new(repo.database, reader, stream, progress)
+     processor.process_pack
     end
 
+    def select_processor_class(reader, unpack_limit)
+      unpack_limit ||= transfer_unpack_limit
+      
+      if unpack_limit and reader.count > unpack_limit
+        Pack::Indexer
+      else
+        Pack::Unpacker
+      end
+    end
+    
+    def transfer_unpack_limit
+      repo.config.get(["transfer", "unpackLimit"])
+    end
   end
 end

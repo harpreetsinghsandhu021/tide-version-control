@@ -45,10 +45,8 @@ module Command
       # Track any errors during unpacking
       @unpack_error = nil
 
-      # Only receive objects if there are new objects to receive
-      # (indicated by non-nil new_oid in any request)
-      recv_packed_objects if @requests.values.any?(&:last)
-      # Report successful unpacking
+      unpack_limit = repo.config.get(["recieve", "unpackLimit"])
+      recv_packed_objects(unpack_limit) if @requests.values.any?(&:last)
       report_status("unpack ok")
     rescue => error
       # Store error and report failure if anything goes wrong

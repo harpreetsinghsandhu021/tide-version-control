@@ -5,6 +5,7 @@ require_relative "./database/blob"
 require_relative "./database/tree"
 require_relative "./database/commit"
 require_relative "./database/tree_diff"
+require_relative "./temp_file"
 
 # Database class handles storage and retrieval of git objects
 # It manages the object database in the .git/objects directory
@@ -17,9 +18,6 @@ class Database
   }
 
   Raw = Struct.new(:type, :size, :data)
-
-  # Characters used for generating temporary filenames
-  TEMP_CHARS = ("a".."z").to_a + ("A".."Z").to_a + ("0".."9").to_a
 
   # @param pathname [Pathname] Path to the .git/objects directory
   # @param objects [Hash] Caching the result of reading an object from disk
@@ -142,6 +140,10 @@ class Database
     Raw.new(type, size)
   end
 
+  def pack_path
+    @pathname.join("pack")
+  end
+
 
   private
 
@@ -167,36 +169,15 @@ class Database
   # @param content [String] Object content to write
   def write_object(oid, content)
     # Split the oid into directory prefix (first 2 chars) and filename (remaining chars)
-    object_path = object_path(oid)
-    return if File.exist?(object_path)
+    path = object_path(oid)
+    return if File.exist?(path)
     
-    dirname = object_path.dirname 
-    temp_path = dirname.join(generate_temp_name)
-
-    begin 
-      flags = File::RDWR | File::CREAT | File::EXCL
-      file = File.open(temp_path, flags)
-    rescue Errno::ENOENT
-      # Create directory if it doesn't exist and retry
-      Dir.mkdir(dirname)
-      file = File.open(temp_path, flags)
-    end 
-
-    # Compress content using zlib deflate algorithm
-    compressed = Zlib::Deflate.deflate(content, Zlib::BEST_SPEED)
-
-    file.write(compressed)
-    file.close
-
-    # Atomic rename of temp file to final location
-    File.rename(temp_path, object_path)
+    file = Tempfile.new(path.dirname, "tmp_obj")
+    file.write(Zlib::Deflate.deflate(content, Zlib::BEST_SPEED))
+    file.move(path.basename)
+    
   end
-  
-  # Generates a random temporary filename
-  # @return [String] Random filename in format "tmp_obj_XXXXXX"
-  def generate_temp_name
-    "tmp_obj_#{(1..6).map {TEMP_CHARS.sample}.join("") }"
-  end
+ 
 
 
   def read_object(oid)
