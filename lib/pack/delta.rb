@@ -1,4 +1,5 @@
 require_relative "./numbers"
+require_relative "./xdelta"
 
 module Pack
   class Delta 
@@ -41,6 +42,26 @@ module Pack
       end
     end
 
+    def initialize(source, target)
+      @base = source.entry
+      @data = sizeof(source) + sizeof(target)
+
+      source.delta_index ||= XDelta.create_index(source.data)
+
+      delta = source.delta_index.compress(target.data)
+      delta.each { |op| @data.concat(op.to_s) }
+    end
+
+    def sizeof(entry)
+      # Convert the entry's size into a variable-length integer
+      # using 7 bits per byte (VarIntLE format)
+      # This is used to create the delta header which stores source/target sizes
+      bytes = Numbers::VarIntLE.write(entry.size, 7)
+
+      # Convert the array of bytes into a binary string
+      # This format is required for writing to files
+      bytes.pack("C*")
+    end
 
   end
 end

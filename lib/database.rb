@@ -137,6 +137,11 @@ class Database
     File.file?(object_path(oid))
   end
 
+  def load_info(oid)
+    type, size, _ = read_object_header(oid, 128)
+    Raw.new(type, size)
+  end
+
 
   private
 

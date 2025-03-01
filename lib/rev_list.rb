@@ -48,6 +48,9 @@ class RevList
     # Caches the treediffs we calculate.
     @diffs = {}
 
+    # Stores the first path for each object.
+    @paths = {}
+
     # Disabled by default, Controls whether the the class should return only commit informations
     # or include associated objects(like files in the commits).
     @objects = options.fetch(:objects, false)
@@ -162,7 +165,7 @@ class RevList
     limit_list if @limited
     mark_edges_uninteresting if @objects
     traverse_commits { |commit| yield commit }
-    traverse_pending { |object| yield object }
+    traverse_pending { |object| yield object, @paths[object.oid] }
   end 
 
   # Limits the revision list based on uninteresting commits
@@ -213,6 +216,8 @@ class RevList
   end
 
   def traverse_tree(entry)
+    @paths[entry.oid] ||= path 
+
     return if !yield entry
     return if !entry.tree?
 

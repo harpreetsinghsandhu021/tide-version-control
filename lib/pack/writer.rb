@@ -2,6 +2,7 @@ require "digest/sha1"
 require "zlib"
 
 require_relative "./numbers"
+require_relative "./entry"
 
 module Pack
   class Writer
@@ -89,6 +90,21 @@ module Pack
       @progress&.tick(@offset)
     end
 
+    def prepare_pack_list(rev_list)
+      pack_list = []
+      @progress&.start("Countng objects")
+
+      rev_list.each do |object, path|
+        add_to_pack_list(object, path)
+        @progress&.tick
+      end
+      @progress&.stop
+    end
+
+    def add_to_pack_list(object, path)
+      info = @database.load_info(object.oid)
+      @pack_list.push(Entry.new(object.oid, info, path))
+    end
 
   end
 end
