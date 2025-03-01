@@ -20,7 +20,7 @@ module Pack
       @objects.push(entry)
     end
 
-    def build_detlas
+    def build_deltas
       @progress&.start("Compressing objects", @objects.size)
       @objects.sort_by!(&:sort_key)
 

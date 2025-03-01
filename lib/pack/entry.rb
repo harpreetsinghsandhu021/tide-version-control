@@ -8,6 +8,8 @@ module Pack
     def_delegator :@info, :type, :size
 
     attr_reader :oid, :delta, :depth
+
+    attr_accessor :offset
     
     def initialize(oid, info, path)
       @oid = oid
@@ -22,7 +24,11 @@ module Pack
     end
 
     def packed_type
-      TYPE_CODES.fetch(@info.type)
+      @delta ? REF_DELTA : TYPE_CODES.fetch(@info.type)
+    end
+
+    def delta_prefix
+      @delta ? [@delta.base.oid].pack("H40") : ""
     end
 
     def packed_size

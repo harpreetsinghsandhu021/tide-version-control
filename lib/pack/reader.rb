@@ -48,10 +48,16 @@ module Pack
     def read_record
       # First read the type and size from the record header
       type, _ = read_record_header
-      # Create a new Record object with:
-      # - The type looked up from TYPE_CODES mapping
-      # - The decompressed object data from the zlib stream
-      Record.new(TYPE_CODES.key(type), read_zlib_stream)
+
+      case type
+      when COMMIT, TREE, BLOB 
+          # Create a new Record object with:
+          # - The type looked up from TYPE_CODES mapping
+          # - The decompressed object data from the zlib stream
+          Record.new(TYPE_CODES.key(type), read_zlib_stream)
+      when REF_DELTA
+        read_ref_delta
+      end
     end
 
     # Reads and parses a record header using variable-length encoding
@@ -104,6 +110,11 @@ module Pack
       @input.seek(stream.total_in - total, IO::SEEK_CUR)
       # Return the fully decompressed data
       string
+    end
+
+    def read_ref_delta
+      base_oid = @input.read(20).unpack("H40").first
+      RefDelta.new(base_oid, read_zlib_stream)
     end
 
   end

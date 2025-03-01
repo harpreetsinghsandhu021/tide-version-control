@@ -25,19 +25,22 @@ module Command
       # Read and validate pack header
       reader.read_header
 
-      progress&.start("Unpacking objects", reader.count)
-      
-      # Process each object in the pack
-      reader.count.times do 
-        # Capture and store each object record
-        record, _ = stream.capture { reader.read_record }
-        repo.database.store(record)
-        progress&.tick(stream.offset)
-      end
-      progress&.stop
+      unpacker = Pack::Unpacker.new(repo.database, reader, stream, progress)
+      unpacker.process_pack
 
-      # Verify pack integrity using checksum
-      stream.verify_checksum
+      # progress&.start("Unpacking objects", reader.count)
+      
+      # # Process each object in the pack
+      # reader.count.times do 
+      #   # Capture and store each object record
+      #   record, _ = stream.capture { reader.read_record }
+      #   repo.database.store(record)
+      #   progress&.tick(stream.offset)
+      # end
+      # progress&.stop
+
+      # # Verify pack integrity using checksum
+      # stream.verify_checksum
     end
 
   end

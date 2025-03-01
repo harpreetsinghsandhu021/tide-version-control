@@ -3,6 +3,7 @@ require "zlib"
 
 require_relative "./numbers"
 require_relative "./entry"
+require_relative "./compressor"
 
 module Pack
   class Writer
@@ -30,6 +31,7 @@ module Pack
     
     def write_objects(rev_list)
       prepare_pack_list(rev_list)
+      compress_objects
       write_header
       write_entries
       @output.write(@digest.digest)
@@ -74,24 +76,35 @@ module Pack
 
     # Writes a Git object entry to the packfile.
     def write_entry(entry)
-      object = @database.load_raw(entry.oid) # Load the raw object data. 
-      header = Numbers::VarIntLE.write(object.size) # Encode the object`s size using a variable-length integer format. 
-     
-      # Set the object`s type bits (first 3 bits) in the first byte of the header.
-      header[0] |= entry.type << 4
+      # If the entry has a delta, write the delta base entry first.
+      write_entry(entry.delta.base) if entry.delta
 
-      # Write the header to the packfile after packing it as a string of bytes("C*")
+      # If the entry already has an offset, it has already been written.
+      return if entry.offset
+
+      # Set the entry`s offset to the current offset in the packfile.
+      entry.offset = @offset
+
+      # Get the object data, either from the delta or from the database. 
+      object = entry.delta || @database.load_raw(entry.oid)
+
+      # Construct the packfile header for the entry. 
+      # The header is a 4-byte value consisting of:
+      #  - 4 bits: packed type (commit, tree etc.)
+      #  - 28 bits: packed size (size of the compressed object data)
+      header = Numbers::VarIntLE.write(entry.packed_size, 4)
+      header[0] |= entry.packed_type << 4
+
+      # Write the header, delta prefix(if any), and compressed object data.
       write(header.pack("C*"))
-
-      # Compress the object`s data using Zlib deflation with the specified compression level.
-      # and write compressed data to the packfile.
+      write(entry.delta_prefix)
       write(Zlib::Deflate.deflate(object.data, @compression))
 
       @progress&.tick(@offset)
     end
 
     def prepare_pack_list(rev_list)
-      pack_list = []
+      @pack_list = []
       @progress&.start("Countng objects")
 
       rev_list.each do |object, path|
@@ -104,6 +117,13 @@ module Pack
     def add_to_pack_list(object, path)
       info = @database.load_info(object.oid)
       @pack_list.push(Entry.new(object.oid, info, path))
+    end
+
+    def compress_objects
+      compressor = Compressor.new(@database, @progress)
+      @pack_list.each { |entry| compressor.add(entry) }
+
+      compressor.build_deltas
     end
 
   end
