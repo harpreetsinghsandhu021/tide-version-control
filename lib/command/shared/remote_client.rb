@@ -34,6 +34,17 @@ module Command
       @conn = Remotes::Protocol.new(name, output, input, capabilities)
     end
 
+    def recv_references
+      @remote_refs = {}
+
+      @conn.recv_until(nil) do |line|
+        oid, ref = REF_LINE.match(line).captures
+        @remote_refs[ref] = oid.downcase unless oid == ZERO_OID
+      end
+      puts @remote_refs
+    end
+
+
     # Constructs the shell command for launching the agent
     # @param program [String] The program/command to execute 
     # @param url [String] The URL to connect to

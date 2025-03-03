@@ -53,7 +53,7 @@ module Pack
       # Returns a tuple: [first_byte, decoded_value]
       def self.read(input, shift)
         # Read the first byte from the input stream
-        first = input.readByte 
+        first = input.readbyte 
 
         # Extract the lower 4 bits of the first byte. This gives us the initial value.
         value = first & (2 ** shift - 1)  

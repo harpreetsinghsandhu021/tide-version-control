@@ -50,7 +50,7 @@ class Config
     # Generates the section header line for the config file
     # @return [String] formatted section header
     def heading_line
-      line = "[#{ name.first }]"
+      line = "[#{ name.first }"
       line.concat(%' "#{ name.drop(1).join(".") }"') if name.size > 1
       line.concat("]\n")
     end

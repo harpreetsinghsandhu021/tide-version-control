@@ -67,7 +67,18 @@ class Remotes
     # Currently only handles simple (non-wildcard) refspecs
     def match_refs(refs)
       # Only handle literal (non-wildcard) refs for now
-      return { target => [source, forced]} if !source.to_s.include?("*")
+      return { target => [source, forced] } unless source.to_s.include?("*")
+
+      pattern  = /^#{ source.sub("*", "(.*)") }$/
+      mappings = {}
+
+      refs.each do |ref|
+        next unless match = pattern.match(ref)
+        dst = match[1] ? target.sub("*", match[1]) : target
+        mappings[dst] = [ref, forced]
+      end
+
+      mappings
     end
 
   end

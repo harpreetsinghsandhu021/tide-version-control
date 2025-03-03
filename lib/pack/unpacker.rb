@@ -11,7 +11,7 @@ module Pack
     end
 
     def process_pack
-      progress&.start("Unpacking objects", @reader.count)
+      @progress&.start("Unpacking objects", @reader.count)
       
       # Process each object in the pack
       @reader.count.times do 

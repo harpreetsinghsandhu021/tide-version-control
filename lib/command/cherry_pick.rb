@@ -1,4 +1,5 @@
 require_relative "../editor"
+require_relative "../command/shared/sequencing"
 
 module Command
   

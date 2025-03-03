@@ -1,3 +1,5 @@
+require_relative "../command/shared/sequencing"
+
 module Command 
   class Revert < Base
     

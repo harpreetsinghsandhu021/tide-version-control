@@ -9,24 +9,38 @@ require_relative './command/log'
 require_relative './command/rm'
 require_relative './command/config'
 require_relative './command/remote'
+require_relative './command/reset'
+require_relative './command/revert'
 require_relative './command/push'
+require_relative './command/fetch'
+require_relative './command/cherry_pick'
+require_relative './command/recieve_pack'
+require_relative './command/upload_pack'
 
 module Command 
   Unknown = Class.new(StandardError)
 
   COMMANDS = {
-    "init" => Init, 
-    "add" => Add,
-    "commit" => Commit,
-    "status" => Status,
-    "diff" => Diff,
-    "branch" => Branch,
-    "checkout"=> Checkout, 
-    "log" => Log, 
-    "rm" => Rm,
-    "config" => Config, 
-    "remote" => Remote, 
-    "push" => Push, 
+    "init"         => Init,
+    "config"       => Config,
+    "add"          => Add,
+    "rm"           => Rm,
+    "commit"       => Commit,
+    "status"       => Status,
+    "diff"         => Diff,
+    "branch"       => Branch,
+    "checkout"     => Checkout,
+    "reset"        => Reset,
+    "rev-list"     => RevList,
+    "log"          => Log,
+    "merge"        => Merge,
+    "cherry-pick"  => CherryPick,
+    "revert"       => Revert,
+    "remote"       => Remote,
+    "fetch"        => Fetch,
+    "push"         => Push,
+    "upload-pack"  => UploadPack,
+    "receive-pack" => RecievePack
   }
 
   def self.execute(dir, env, argv, stdin, stdout, stderr)

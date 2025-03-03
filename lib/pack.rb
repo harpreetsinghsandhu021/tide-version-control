@@ -20,6 +20,7 @@ module Pack
   MAX_COPY_SIZE = 0xffffff # Maximum space allocated for the size of copy operation i.e 3 bytes
   MAX_INSERT_SIZE = 0x7f # Maximum space allocated for the size of inser operation i.e 7 bits
 
+  IDX_SIGNATURE  = 0xff744f63
   IDX_MAX_OFFSET = 0x80000000
 
   Record = Struct.new(:type, :data) do 

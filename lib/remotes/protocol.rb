@@ -15,7 +15,7 @@ class Remotes
     end
 
     def send_packet(line)
-      return @output.write("0000") if line == nil? # If the input is nil, this denotes a flush packet.
+      return @output.write("0000") if line == nil # If the input is nil, this denotes a flush packet.
 
       line = append_caps(line) # Appends the local capabilities to the message. 
       size = line.bytesize + 5 # Calculate the size i.e byte length of message + 4 bytes for 
@@ -33,8 +33,8 @@ class Remotes
       @caps_sent = true
 
       sep = (@command == "fetch") ? " " : "\0" # seperator to seperate the capabilities from the message. 
-      caps = caps_local
-      caps &= caps_remote if @caps_remote
+      caps = @caps_local
+      caps &= @caps_remote if @caps_remote
 
       line + sep + caps.join(" ")
     end
@@ -46,7 +46,7 @@ class Remotes
       
       # Return the head if it does not match the regex.
       # # The regex matches a string containing 4 hexadecimal characters.
-      return head if /[0-9a-f]{4}/ !=~ head
+      return head unless /[0-9a-f]{4}/ =~ head
 
       size = head.to_i(16)
       return nil if size == 0 # Return nil if size is 0, indicating an empty packet. 
