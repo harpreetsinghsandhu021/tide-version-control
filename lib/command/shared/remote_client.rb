@@ -64,7 +64,6 @@ module Command
         oid, ref = REF_LINE.match(line).captures
         @remote_refs[ref] = oid.downcase unless oid == ZERO_OID
       end
-      puts @remote_refs
     end
 
     def report_ref_update(ref_names, error, old_oid = nil, new_oid = nil, is_ff=false)
@@ -81,7 +80,7 @@ module Command
         # Branch deletion - no new commit
         show_ref_update("-", "[deleted]", ref_names)
       else
-        # Normal update case - show range of commits changed
+        # Normal update case - show range of commits chang ed
         report_range_update(ref_names, old_oid, new_oid, is_ff)
       end
     end

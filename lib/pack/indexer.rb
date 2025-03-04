@@ -2,6 +2,8 @@ require "digest/sha1"
 require "zlib"
 
 require_relative "./expander"
+require_relative "../temp_file"
+require_relative "./reader"
 
 module Pack
   class Indexer 
@@ -11,7 +13,7 @@ module Pack
       attr_reader :digest
 
       def initialize(pack_dir, name)
-        @file = Tempfile.new(pack_dir, name)
+        @file = TempFile.new(pack_dir, name)
         @digest = Digest::SHA1.new
       end
 
@@ -97,6 +99,8 @@ module Pack
       when Record
         oid = @database.hash_object(record)
         @index[oid] = [offset, crc32]
+      when OfsDelta
+        @pending[offset - record.base_ofs].push([offset, crc32])
       when RefDelta
         @pending[record.base_oid].push([offset, crc32])
       end
@@ -127,11 +131,12 @@ module Pack
       #    - Reads the original record from pack
       #    - Resolves any deltas that depend on it
       # 5. Completes progress tracking
-      deltas = @pending.reduce(0) { |n, (_list)| n + list.size }
+      deltas = @pending.reduce(0) { |n, (_, list)| n + list.size }
       @progress&.start("Resolving deltas", deltas)
 
       @index.to_a.each do |oid,(offset, _)|
         record = read_record_at(offset)
+        resolve_delta_base(record, offset)
         resolve_delta_base(record, oid)
       end
       @progress&.stop
@@ -161,6 +166,7 @@ module Pack
       @index[oid] = [offset, crc32]
       @progress&.tick
 
+      resolve_delta_base(object, offset)
       resolve_delta_base(object, oid)
     end
 
@@ -205,7 +211,7 @@ module Pack
       # We iterate over the sorted object IDs and write each one to the index file.
       # The Object IDs are packed as 40 character hexadecimal string.
       @object_ids.each do |oid|
-        @index_file.write([oid].pack("h40"))
+        @index_file.write([oid].pack("H40"))
       end
     end
 

@@ -20,11 +20,6 @@ module Pack
       @target_size = read_size
     end
 
-    def read_size
-      Numbers::VarIntLE.read(@delta, 7)[1]
-    end
-
-
     def expand(source)
       check_size(source, @source_size)
       target = ""
@@ -37,12 +32,19 @@ module Pack
           target.concat(insert.data)
         else
           copy = Delta::Copy.parse(@delta, byte)
-          target.concat(source.byteslice(copy.offset, copy.size))
+          size = (copy.size == 0) ? GIT_MAX_COPY : copy.size
+          target.concat(source.byteslice(copy.offset, size))
         end
       end
 
       check_size(target, @target_size)
       target
+    end
+
+    private 
+    
+    def read_size
+      Numbers::VarIntLE.read(@delta, 7)[1]
     end
 
     # Checks the sizes of the strings against the sizes recorded at the beginning
@@ -53,3 +55,5 @@ module Pack
 
   end
 end
+
+

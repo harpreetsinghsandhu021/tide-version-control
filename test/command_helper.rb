@@ -2,10 +2,12 @@ require "fileutils"
 require "pathname"
 require "command"
 require "repository"
+require "editor"
 
 
 module CommandHelper 
   def self.included(suite)
+    return if !suite.respond_to?(:before)
     suite.before { tide_cmd "init", repo_path.to_s }
     suite.after { FileUtils.rm_rf(repo_path) }
   end
@@ -39,6 +41,7 @@ module CommandHelper
   end
 
   def tide_cmd(*argv)
+    @env ||= {}
     @stdin = StringIO.new
     @stdout = StringIO.new
     @stderr = StringIO.new
@@ -51,15 +54,16 @@ module CommandHelper
     @env[key] = value
   end
 
-  def set_stdin(string)
-    @stdin = StringIO.new(string)  
-  end
+  # def set_stdin(string)
+  #   @stdin = StringIO.new(string)  
+  # end
 
-  def commit(message)
-    set_env("GIT_AUTHOR_NAME", "A. U. Thor")
-    set_env("GIT_AUTHOR_EMAIL", "author@example.com")
-    set_stdin(message)
-    tide_cmd("commit")
+  def commit(message, time = nil, author = true)
+    if author
+      set_env("GIT_AUTHOR_NAME", "A. U. Thor")
+      set_env("GIT_AUTHOR_EMAIL", "author@example.com")
+    end
+    Time.stub(:now, time || Time.now) { tide_cmd "commit", "-m", message }
   end
 
   def make_executable(name)
@@ -67,8 +71,6 @@ module CommandHelper
   end
 
   def assert_status(status)
-    puts status
-    puts "--------"
     assert_equal(status, @cmd.status)
   end
 

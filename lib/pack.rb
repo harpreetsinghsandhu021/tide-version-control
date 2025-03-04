@@ -4,6 +4,7 @@ module Pack
   HEADER_FORMAT = "a4N2"
   SIGNATURE = "PACK"
   VERSION = 2
+  
 
   COMMIT = 1
   TREE = 2
@@ -18,6 +19,7 @@ module Pack
     "blob" => BLOB
   }
 
+  GIT_MAX_COPY    = 0x10000
   MAX_COPY_SIZE = 0xffffff # Maximum space allocated for the size of copy operation i.e 3 bytes
   MAX_INSERT_SIZE = 0x7f # Maximum space allocated for the size of inser operation i.e 7 bits
 

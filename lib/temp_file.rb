@@ -1,5 +1,5 @@
 
-class Tempfile
+class TempFile
   # Characters used for generating temporary filenames
   TEMP_CHARS = ("a".."z").to_a + ("A".."Z").to_a + ("0".."9").to_a
 

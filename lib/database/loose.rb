@@ -44,7 +44,7 @@ class Database
       path = object_path(oid)
       return if File.exist?(path)
       
-      file = Tempfile.new(path.dirname, "tmp_obj")
+      file = TempFile.new(path.dirname, "tmp_obj")
       file.write(Zlib::Deflate.deflate(content, Zlib::BEST_SPEED))
       file.move(path.basename)
       
