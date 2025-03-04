@@ -10,6 +10,7 @@ module Pack
   BLOB = 3
 
   REF_DELTA = 7
+  OFS_DELTA = 6
 
   TYPE_CODES = {
     "commit" => COMMIT, 
@@ -32,5 +33,5 @@ module Pack
   end
 
   RefDelta = Struct.new(:base_oid, :delta_data)
-
+  OfsDelta = Struct.new(:base_ofs, :delta_data)
 end

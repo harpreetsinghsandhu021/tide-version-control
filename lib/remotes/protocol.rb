@@ -2,6 +2,8 @@ require_relative "../remotes"
 
 class Remotes
   class Protocol
+
+    attr_reader :input, :output
     
     def initialize(command, input, output, capabilities = [])
       @command = command

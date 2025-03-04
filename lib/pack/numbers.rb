@@ -33,10 +33,9 @@ module Pack
           # Finally, bytes << [result from step 2]: This is a left shift
           # operation where bytes is being shifted by the amount specified
           #  by the result from step 2
-          bytes << (0x80 | value & mask)
+          bytes.push(0x80 | value & mask)
+          value >>= shift
 
-          value >>= shift # Right shift "value" by "shift" bits to process the next
-                          # set of bits.
                           
           # Update the mask and shift for subsequent bytes (7 bits per byte).
           mask, shift = 0x7f, 7
@@ -82,6 +81,31 @@ module Pack
         [first, value] 
       end
 
+    end
+
+    module VarIntBE
+      def self.write(value)
+        bytes = [value & 0x7f]
+
+        until (value >>= 7) == 0
+          value -= 1
+          bytes.push(0x80 | value & 0x7f)
+        end
+
+        bytes.reverse.pack("C*")
+      end
+
+      def self.read(input)
+        byte  = input.readbyte
+        value = byte & 0x7f
+
+        until byte < 0x80
+          byte  = input.readbyte
+          value = ((value + 1) << 7) | (byte & 0x7f)
+        end
+
+        value
+      end
     end
 
     module PackedInt56LE

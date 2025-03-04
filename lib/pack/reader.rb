@@ -1,5 +1,6 @@
 require "zlib"
 require_relative "./numbers"
+require_relative "./expander"
 
 module Pack
   # The Reader class is responsible for reading and parsing Git pack files.
@@ -49,14 +50,18 @@ module Pack
       # First read the type and size from the record header
       type, _ = read_record_header
 
+
       case type
-      when COMMIT, TREE, BLOB 
-          # Create a new Record object with:
-          # - The type looked up from TYPE_CODES mapping
-          # - The decompressed object data from the zlib stream
-          Record.new(TYPE_CODES.key(type), read_zlib_stream)
+      when COMMIT, TREE, BLOB
+        # Create a new Record object with:
+        # - The type looked up from TYPE_CODES mapping
+        # - The decompressed object data from the zlib stream
+        Record.new(TYPE_CODES.key(type), read_zlib_stream) 
+     
       when REF_DELTA
         read_ref_delta
+      when OFS_DELTA
+        read_ofs_delta
       end
     end
 
@@ -68,7 +73,7 @@ module Pack
     def read_record_header
       # Read a variable-length integer from the input
       # Returns both the first byte and the complete size value
-      byte, size = Numbers::VarIntLE.read(@input)
+      byte, size = Numbers::VarIntLE.read(@input, 4)
       # Extract the type from the first byte:
       # Right shift by 4 bits and mask with 0x7 to get 3-bit type
       type = (byte >> 4) & 0x7
@@ -115,6 +120,11 @@ module Pack
     def read_ref_delta
       base_oid = @input.read(20).unpack("H40").first
       RefDelta.new(base_oid, read_zlib_stream)
+    end
+
+    def read_ofs_delta
+      offset = Numbers::VarIntBE.read(@input)
+      OfsDelta.new(offset, read_zlib_stream)
     end
 
     def read_info

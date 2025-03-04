@@ -21,9 +21,6 @@ module Command
     def start_agent(name, program, url, capabilities = [])
       # Convert the program and URL into a properly formatted shell command
       argv = build_agent_command(program, url)
-      
-       puts "Executing: #{Shellwords.shelljoin(argv)}"
-
       # Open a bidirectional pipe to the agent process
       # input: Write to the process
       # output: Read from the process
@@ -34,17 +31,6 @@ module Command
       @conn = Remotes::Protocol.new(name, output, input, capabilities)
     end
 
-    def recv_references
-      @remote_refs = {}
-
-      @conn.recv_until(nil) do |line|
-        oid, ref = REF_LINE.match(line).captures
-        @remote_refs[ref] = oid.downcase unless oid == ZERO_OID
-      end
-      puts @remote_refs
-    end
-
-
     # Constructs the shell command for launching the agent
     # @param program [String] The program/command to execute 
     # @param url [String] The URL to connect to
@@ -53,7 +39,6 @@ module Command
       # Parse the URL to extract its components
       uri = URI.parse(url)
 
-      program = program || ""
       
       # Split the program into shell arguments and append the path component of the URL
       argv = Shellwords.shellsplit(program) + [uri.path]
@@ -70,6 +55,16 @@ module Command
       ssh += ["-l", uri.user] if uri.user
 
       ssh + [Shellwords.shelljoin(argv)]
+    end
+
+    def recv_references
+      @remote_refs = {}
+
+      @conn.recv_until(nil) do |line|
+        oid, ref = REF_LINE.match(line).captures
+        @remote_refs[ref] = oid.downcase unless oid == ZERO_OID
+      end
+      puts @remote_refs
     end
 
     def report_ref_update(ref_names, error, old_oid = nil, new_oid = nil, is_ff=false)

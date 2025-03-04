@@ -1,6 +1,7 @@
 require "forwardable"
 
 require_relative "../pack"
+require_relative "../pack/index"
 
 class Database
   class Packed

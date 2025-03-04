@@ -1,11 +1,16 @@
 require_relative "../../pack"
 require_relative "../../progress"
+require_relative "../../pack/stream"
+require_relative "../../pack/reader"
+require_relative "../../pack/unpacker"
+require_relative "../../pack/indexer"
 
 module Command
   # RecieveObjects module handles the network reception of Git objects
   # by unpacking and storing them from a packfile stream
   module RecieveObjects
     
+    UNPACK_LIMIT = 100
     # Receives and stores Git objects from a packed format stream
     # @param prefix [String] Optional prefix for the pack stream (default: "")
     # @details
@@ -20,7 +25,7 @@ module Command
       reader = Pack::Reader.new(stream)
       
       # Initialize progress for displaying progrss of downloading process
-      progress = Progress.new(@stderr) if !@conn.input = STDIN
+      progress = Progress.new(@stderr) if @conn.input != STDIN
       
       # Read and validate pack header
       reader.read_header
@@ -43,7 +48,7 @@ module Command
     end
     
     def transfer_unpack_limit
-      repo.config.get(["transfer", "unpackLimit"])
+      repo.config.get(["transfer", "unpackLimit"]) || UNPACK_LIMIT
     end
   end
 end

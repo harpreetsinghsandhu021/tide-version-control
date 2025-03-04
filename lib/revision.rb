@@ -61,24 +61,10 @@ class Revision
   # Returns nil if the revision string is invalid
   # @param revision [String] the revision expression to parse
   # @return [Ref, Parent, Ancestor, nil] the parsed revision structure
-  # def self.parse(revision)
-  #   if match = PARENT.match(revision)
-  #     rev = Revision.parse(match[1])
-  #     rev ? Parent.new(rev) : nil
-  #   elsif match = ANCESTOR.match(revision)
-  #     rev = Revision.parse(match[1])
-  #     rev ? Ancestor.new(rev, match[2].to_i) : nil
-  #   elsif Revision.valid_ref?(revision)
-  #     name = REF_ALIASES[revision] || revision
-  #     Ref.new(name)
-  #   end
-  # end
-  
   def self.parse(revision)
     if match = PARENT.match(revision)
       rev = Revision.parse(match[1])
-      n = (match[2] == "") ? 1 : match[2].to_i
-      rev ? Parent.new(rev, n) : nil
+      rev ? Parent.new(rev) : nil
     elsif match = ANCESTOR.match(revision)
       rev = Revision.parse(match[1])
       rev ? Ancestor.new(rev, match[2].to_i) : nil
@@ -99,13 +85,11 @@ class Revision
 
   def resolve(type = nil)
     oid = @query&.resolve(self)
-    puts "oid is #{oid} #{@expr}"
     # Check that the ID that results from evaluating the 
     oid = nil if type and not load_typed_object(oid, type)
 
     return oid if oid
 
-    puts "i`m here invalid object"
     raise InvalidObject, "Not a valid object name: '#{ @expr }'"
   end
 
@@ -135,7 +119,6 @@ class Revision
     return nil if !oid
 
     object = @repo.database.load(oid)
-    puts "this is object #{object}" 
 
     if object.type == type
       object

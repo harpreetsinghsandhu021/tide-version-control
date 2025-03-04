@@ -114,13 +114,9 @@ class Database
     Entry.new(oid, Tree::TREE_MODE)
   end
 
- 
-
- 
-
-  def pack_path
-    @pathname.join("pack")
-  end
+  # def pack_path
+  #   @backend.pack_path
+  # end
 
 
   private
