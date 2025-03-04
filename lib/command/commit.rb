@@ -50,13 +50,15 @@ module Command
       end
     end
 
+    private
+
     def compose_message(message)
       edit_file(commit_message_path) do |editor|
         editor.puts(message || "")
         editor.puts("")
         editor.note(COMMIT_NOTES)
 
-        editor.close if @options[:edit]
+        editor.close if !@options[:edit]
       end
     end
 
@@ -83,3 +85,5 @@ module Command
 
   end
 end
+
+
