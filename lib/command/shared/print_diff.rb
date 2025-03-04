@@ -20,10 +20,10 @@ module Command
 
     private
 
-    def from_entry(path, entry)
-      blob = repo.database.load(entry.oid)
-      Target.new(path, entry.oid, entry.mode.to_s(8), blob.data)
-    end
+    # def from_entry(path, entry)
+    #   blob = repo.database.load(entry.oid)
+    #   Target.new(path, entry.oid, entry.mode.to_s(8), blob.data)
+    # end
 
     def from_nothing(path)
       Target.new(path, NULL_OID, nil, "")

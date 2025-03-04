@@ -17,6 +17,19 @@ module Command
       with "#" will be ignored, and an empty message aborts the commit. 
     MSG
     
+    def define_options 
+      define_write_commit_options
+
+      @parser.on "-C <commit>", "--reuse-message=<commit>" do |commit|
+        @options[:reuse] = commit
+        @options[:edit] = false
+      end
+
+      @parser.on "-c <commit>", "--reedit-message=<commit>" do |commit|
+        @options[:reuse] = commit
+        @options[:edit] = true
+      end
+    end
     def run  
       repo.index.load
 
@@ -36,19 +49,7 @@ module Command
     end
 
 
-    def define_options 
-      define_write_commit_options
-
-      @parser.on "-C <commit>", "--reuse-message=<commit>" do |commit|
-        @options[:reuse] = commit
-        @options[:edit] = false
-      end
-
-      @parser.on "-c <commit>", "--reedit-message=<commit>" do |commit|
-        @options[:reuse] = commit
-        @options[:edit] = true
-      end
-    end
+   
 
     private
 
@@ -75,7 +76,7 @@ module Command
     end
 
     def reused_message
-      return nil if !@options.has_key?(:reuse)
+      return nil unless @options.has_key?(:reuse)
 
       revision = Revision.new(repo, @options[:reuse])
       commit = repo.database.load(revision.resolve)

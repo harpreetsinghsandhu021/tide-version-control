@@ -25,8 +25,8 @@ class Database
       "#{ name } <#{ email }> #{ timestamp }"
     end
 
-    def readable_time
-      time.strftime("%a %b %-d %H:%M:%S %Y %z")
-    end
+    # def readable_time
+    #   time.strftime("%a %b %-d %H:%M:%S %Y %z")
+    # end
   end
 end

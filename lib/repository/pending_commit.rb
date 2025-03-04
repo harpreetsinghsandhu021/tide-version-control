@@ -62,10 +62,5 @@ class Repository
       nil
     end
 
-    def in_progress?
-      merge_type != nil
-    end
-
-
   end
 end

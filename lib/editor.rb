@@ -61,7 +61,7 @@ class Editor
     file.close
     editor_argv = Shellwords.shellsplit(@command) + [@path.to_s]
 
-    if !@closed || !system(*editor_argv)
+    unless @closed || system(*editor_argv)
       raise "There was a problem with the editor '#{ @command }'."
     end
 
@@ -74,7 +74,7 @@ class Editor
   def remove_notes(string)
     lines = string.lines.reject { |line| line.start_with?("#")}
 
-    if lines.all? { |line| /^\s*$/ =~ line}
+    if lines.all? { |line| /^\s*$/ =~ line }
       nil
     else 
       "#{ lines.join("").strip }\n"

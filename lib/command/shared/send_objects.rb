@@ -18,12 +18,13 @@ module Command
       rev_list = ::RevList.new(repo, revs, rev_opts)
 
       # Get compression settings from Git config
-      pack_compresssion = repo.config.get(["pack", "compression"]) || repo.config.get(["core", 'compression'])
+      pack_compression = repo.config.get(["pack", "compression"]) || repo.config.get(["core", 'compression'])
 
       # Configure pack writer with compression settings
-      write_opts = { :compression => pack_compresssion }
-      writer = Pack::Writer.new(@conn.output, repo.database, :compression => pack_compresssion, :progress => Progress.new(@stderr))
-
+      writer = Pack::Writer.new(@conn.output, repo.database,
+                                :compression => pack_compression,
+                                :allow_ofs   => @conn.capable?("ofs-delta"),
+                                :progress    => Progress.new(@stderr))
       # Write all objects from the revision list to the pack
       writer.write_objects(rev_list)
       

@@ -129,10 +129,12 @@ module Command
 
       @parser.on "-m <message>", "--message=<message>" do |message|
         @options[:message] = message
+        @options[:edit]    = false if @options[:edit] == :auto
       end
 
       @parser.on "-F <file>", "--file=<file>" do |file|
         @options[:file] = expanded_pathname(file)
+        @options[:edit] = false if @options[:edit] == :auto
       end
     end
 
