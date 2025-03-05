@@ -53,5 +53,12 @@ class Remotes
       ref_name
     end
 
+    def get_upstream(branch)
+      merge = @config.get(["branch", branch, "merge"])
+      targets = Refspec.expand(fetch_specs, [merge])
+
+      targets.keys.first
+    end
+
   end
 end

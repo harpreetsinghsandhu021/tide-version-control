@@ -1,18 +1,12 @@
+require "fileutils"
+require "pathname"
+require_relative "./lockfile"
+require_relative "./revision"
+
 # Manages Git references (refs) including HEAD
 # Handles reading and updating reference pointers
 class Refs 
   InvalidBranch = Class.new(StandardError)
-  INVALID_NAME = /
-  ^\.
-  | \/\.
-  | \.\.
-  | ^\/
-  | \/$
-  | \.lock$
-  | @\{
-  | [\x00-\x20*:?\[\\^~\x7f]
-  /x
-
 
   HEAD = "HEAD"
   ORIG_HEAD = "ORIG_HEAD" # Stores the original HEAD when resetting the workspace in case 
@@ -59,7 +53,7 @@ class Refs
   def initialize(pathname)
     @pathname = pathname
     @refs_path = @pathname.join(REFS_DIR)
-    @heads_path = @refs_path.join(HEADS_DIR)
+    @heads_path = @pathname.join(HEADS_DIR)
     @remotes_path = @pathname.join(REMOTES_DIR)
   end
 
@@ -87,7 +81,7 @@ class Refs
   def create_branch(branch_name, start_oid)
     path = @heads_path.join(branch_name)
 
-    if INVALID_NAME =~ branch_name
+    if !Revision.valid_ref?(branch_name)
       raise InvalidBranch, "'#{ branch_name }' is not a valid branch name."
     end
 
@@ -127,24 +121,23 @@ class Refs
     lockfile.commit
   end
 
+  
   def update_symref(path, oid)
     lockfile = Lockfile.new(path)
-
     lockfile.hold_for_update
-
+  
     ref = read_oid_or_symref(path)
-    if !ref.is_a?(SymRef) # checks that ref is not a symbolic reference
-      lockfile.write(oid)
-      lockfile.write("\n")
-      lockfile.commit
-    else
-      begin
-        update_symref(@pathname.join(ref.path), oid)
-      ensure
-        lockfile.rollback
-      end
+  
+    unless ref.is_a?(SymRef)
+      write_lockfile(lockfile, oid)
+      return ref&.oid
     end
-
+  
+    begin
+      update_symref(@pathname.join(ref.path), oid)
+    ensure
+      lockfile.rollback
+    end
   end
 
   def read_ref(name)
@@ -308,5 +301,12 @@ class Refs
     end
   end
 
-end
+  def long_name(ref)
+    path = path_for_name(ref)
+    return path.relative_path_from(@pathname).to_s if path
 
+    raise InvalidBranch, 
+    "the requested upstream branch '#{ ref }' does not exist"
+  end
+
+end

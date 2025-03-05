@@ -64,6 +64,18 @@ class Remotes
       end
     end
 
+
+    def self.invert(specs, ref)
+      specs = specs.map { |spec| Refspec.parse(spec) }
+  
+      map = specs.reduce({}) do |mappings, spec|
+        spec.source, spec.target = spec.target, spec.source
+        mappings.merge(spec.match_refs([ref]))
+      end
+  
+      map.keys.first
+    end
+
     # Matches this refspec against available refs
     # Currently only handles simple (non-wildcard) refspecs
     def match_refs(refs)
@@ -81,7 +93,7 @@ class Remotes
 
       mappings
     end
-
   end
+
 
 end

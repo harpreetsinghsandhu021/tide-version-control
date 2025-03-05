@@ -26,6 +26,7 @@ class Revision
     def resolve(context)
       oid = rev.resolve(context)
       n.times { oid = context.commit_parent(oid)}
+
       oid
     end
   end

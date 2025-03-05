@@ -9,6 +9,7 @@ class Remotes
   # Default remote name used when no specific remote is specified
   DEFAULT_REMOTE = "origin"
   # Custom error class for handling remote-related exceptions
+  InvalidBranch = Class.new(StandardError)
   InvalidRemote = Class.new(StandardError)
 
   # Initializes a new Remotes manager
@@ -81,4 +82,28 @@ class Remotes
 
     Remote.new(@config, name)
   end
+
+  def set_upstream(branch, upstream)
+    list_remotes.each do |name|
+      ref = get(name).set_upstream(branch, upstream)
+      return [name, ref] if ref
+    end
+
+    raise InvalidBranch, 
+    "Cannot setup tracking information; " + "starting point '#{ upstream }' is not a branch"
+  end
+  
+  def unset_upstream(branch)
+    @config.open_for_update
+    @config.unset(["branch", branch, "remote"])
+    @config.unset(["branch", branch, "merge"])
+    @config.save
+  end
+
+  def get_upstream(branch)
+    @config.open
+    name = @config.get(["branch", branch, "remote"])
+    get(name)&.get_upstream(branch)
+  end
+
 end
