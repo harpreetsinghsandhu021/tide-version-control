@@ -34,6 +34,9 @@ class Database
       case record
       when Pack::Record
         record
+      when Pack::OfsDelta
+        base = load_raw_at(offset - record.base_ofs)
+        expand_delta(base, record)
       when Pack::RefDelta
         base = load_raw(record.base_oid)
         expand_delta(base, record)
