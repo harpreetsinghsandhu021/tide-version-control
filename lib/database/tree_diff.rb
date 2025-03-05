@@ -34,7 +34,7 @@ class Database
 
     # Detect changes between the two trees
     def detect_deletions(a, b, filter)
-      filter.each_entry do |name, entry|
+      filter.each_entry(a) do |name, entry|
         other = b[name]
 
         next if entry == other # If entries are equal, skip to the next entry
@@ -51,7 +51,7 @@ class Database
 
     # Detect entries that exist in the second tree but not in first
     def detect_additions(a, b, filter)
-      filter.each do |name, entry|
+      filter.each_entry(b) do |name, entry|
         other = a[name]
 
         next if other # skipping any entries that exist in a

@@ -39,6 +39,8 @@ class PathFilter
   def self.build(paths)
     PathFilter.new(Trie.from_paths(paths))
   end
+
+  attr_reader :path
   
   def initialize(routes=Trie.new(true), path = Pathname.new(""))
     @routes = routes
