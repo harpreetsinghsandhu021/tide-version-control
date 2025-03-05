@@ -37,6 +37,14 @@ class Refs
       refs.short_name(path)
     end
 
+    def branch?
+      path.start_with?("refs/heads/")
+    end
+
+    def remote?
+      path.start_with?("refs/remotes/")
+    end
+
   end
   Ref = Struct.new(:oid) do 
     def read_oid 
@@ -198,6 +206,10 @@ class Refs
 
   def list_branches
     list_refs(@heads_path)
+  end
+
+  def list_remotes
+    list_refs(@remotes_path)
   end
 
   def list_refs(dirname)

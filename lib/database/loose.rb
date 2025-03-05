@@ -1,3 +1,7 @@
+require "strscan"
+require "zlib"
+
+require_relative "../temp_file"
 
 class Database
   class Loose 
@@ -22,6 +26,8 @@ class Database
     def load_raw(oid)
       type, size, scanner = read_object_header(oid)
       Raw.new(type, size, scanner.rest)
+    rescue Errno::ENOENT
+      nil
     end
 
     def prefix_match(name)
@@ -53,7 +59,8 @@ class Database
     private
 
     def object_path(oid)
-      @pathname.join(oid[0..1].to_s, oid[2..-1].to_s)
+      # @pathname.join(oid[0..1].to_s, oid[2..-1].to_s)
+       @pathname.join(oid[0..1], oid[2..-1])
     end
 
     def read_object_header(oid, read_bytes = nil)

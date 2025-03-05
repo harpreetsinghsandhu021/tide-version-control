@@ -6,6 +6,44 @@ module Command
   class Log < Base
 
     include PrintDiff
+
+    def define_options
+
+      @rev_list_opts = {}
+      @parser.on("--all") { @rev_list_opts[:all] = true }
+      @parser.on("--branches") { @rev_list_opts[:branches] = true }
+      @parser.on("--remotes") { @rev_list_opts[:remotes] = true }
+
+      @options[:patch] = false
+      define_print_diff_options
+      @options[:abbrev] = :auto
+      
+      @options[:format] = "medium"
+
+      @parser.on "--pretty=<format>", "--format=<format>" do |format|
+        @options[:format] = format
+      end
+
+      @parser.on "--oneline" do 
+        @options[:abbrev] = true if @options[:abbrev] == :auto
+        @options[:format] = "oneline"
+      end
+
+      @options[:decorate] = "auto"
+
+      @parser.on "--decorate[=<format>]" do |format|
+        @options[:decorate] = format || "short"
+      end
+
+      @parser.on "--no-decorate" do 
+        @options[:decorate] = "no"
+      end
+
+      @parser.on "--cc" do
+        @options[:combined] = @options[:patch] = true
+      end
+
+    end
     
     def run 
       setup_pager
@@ -13,7 +51,7 @@ module Command
       @reverse_refs = repo.refs.reverse_refs
       @current_ref = repo.refs.current_ref
 
-      @rev_list = RevList.new(repo, @args)
+      @rev_list = RevList.new(repo, @args, @rev_list_opts)
       @rev_list.each { |commit| show_commit(commit) }
       
       exit 0         
@@ -54,37 +92,7 @@ module Command
       puts "#{ abbrev(commit).colorize(:yellow) + decorate(commit) } #{ commit.title_line }"
     end
 
-    def define_options
-      @options[:patch] = false
-      define_print_diff_options
-      @options[:abbrev] = :auto
-      
-      @options[:format] = "medium"
-
-      @parser.on "--pretty=<format>", "--format=<format>" do |format|
-        @options[:format] = format
-      end
-
-      @parser.on "--oneline" do 
-        @options[:abbrev] = true if @options[:abbrev] == :auto
-        @options[:format] = "oneline"
-      end
-
-      @options[:decorate] = "auto"
-
-      @parser.on "--decorate[=<format>]" do |format|
-        @options[:decorate] = format || "short"
-      end
-
-      @parser.on "--no-decorate" do 
-        @options[:decorate] = "no"
-      end
-
-      @parser.on "--c" do
-        @options[:combined] = @options[:patch] = true
-      end
-
-    end
+  
 
     def abbrev(commit)
       if @options[:abbrev] == true
@@ -125,10 +133,13 @@ module Command
 
     def ref_color(ref)
       ref.head? ? :cyan : :green
+      ref.branch? ? :green : :cyan
+      ref.remote? ? :red : :cyan
     end
 
     def show_patch(commit)
-      return if !@options[:patch] and commit.parents.size <= 1
+      # return if !@options[:patch] and commit.parents.size <= 1
+      return if !@options[:patch]
       return show_merge_patch(commit) if commit.merge?
 
       blank_line
@@ -136,7 +147,7 @@ module Command
     end
 
     def show_merge_patch(commit)
-      return if @options[:combined]
+      return if !@options[:combined]
 
        # 1. It looks at the commit's parents (remember, merges have two!)
        # 2. For each parent, it calculates the difference in files (a "tree diff") 

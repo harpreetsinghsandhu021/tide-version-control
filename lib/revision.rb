@@ -105,7 +105,6 @@ class Revision
   # @param n [Integer] Which parent to retrieve (defaults to 1, matters for merge commits with multiple parents)
   # @return [String, nil] The OID of the nth parent, or nil if the commit or parent doesn't exist.
   def commit_parent(oid, n = 1)
-    puts oid
     return nil if !oid
 
     commit = load_typed_object(oid, COMMIT)

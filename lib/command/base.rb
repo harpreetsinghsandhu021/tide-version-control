@@ -80,7 +80,7 @@ module Command
     end
 
     def fmt(style, string)
-      @isatty ? colorize(string) : string
+      @isatty ? string.colorize(:style) : string
     end
 
     def parse_options
