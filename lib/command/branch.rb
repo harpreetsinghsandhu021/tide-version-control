@@ -1,11 +1,14 @@
 require "colorize"
 
 require_relative "../revision"
+require_relative './shared/fast_forward'
 
 
 module Command 
   class Branch < Base
     
+    include FastForward
+
     def run 
       if @options[:upstream]
         set_upstream_branch
@@ -45,7 +48,6 @@ module Command
     end
 
     def define_options
-
       @parser.on "-u <upstream>", "--set-upstream-to=<upstream>" do |upstream|
         @options[:upstream] = upstream
       end
@@ -56,7 +58,8 @@ module Command
       @parser.on("-a", "--all") { @options[:all] = true }
       @parser.on("-r", "--remotes") { @options[:remotes] = true }
 
-      @parser.on("-v", "--verbose") { @options[:verbose] = true }
+      @options[:verbose] = 0
+      @parser.on("-v", "--verbose") { @options[:verbose] += 1 }
 
       @parser.on("-d", "--delete") {@options[:delete] = true}
       @parser.on("-f", "--force") {@options[:force] = true}
@@ -100,12 +103,32 @@ module Command
     end
 
     def extended_branch_info(ref, max_width)
-      return "" if !@options[:verbose]
+      return "" unless @options[:verbose] > 0
+
       commit = repo.database.load(ref.read_oid)
       short = repo.database.short_oid(commit.oid)
       space = " " * (max_width - ref.short_name.size)
+      upstream = upstream_info(ref)
 
-      "#{ space } #{ short } #{ commit.title_line }"
+      "#{ space } #{ short }#{ upstream } #{ commit.title_line }"
+    end
+
+    def upstream_info(ref)
+      divergence = repo.divergence(ref)
+      return "" if !divergence.upstream
+
+      ahead = divergence.ahead
+      behind = divergence.behind
+      info = []
+
+      if @options[:verbose] > 1
+        info.push(fmt(:blue, repo.refs.short_name(divergence.upstream)))
+      end
+
+      info.push("ahead #{ ahead }") if ahead > 0
+      info.push("behind #{ behind }") if behind > 0
+
+      info.empty? ? "" : " [#{ info.join(", ")}]"
     end
 
     def delete_branches
@@ -113,7 +136,7 @@ module Command
     end
     
     def delete_branch(branch_name)
-      return if !@options[:force]
+      check_merge_status if !@options[:force]
 
       oid = repo.refs.delete_branch(branch_name)
       short = repo.database.short_oid(oid)
@@ -150,6 +173,17 @@ module Command
     rescue Remotes::InvalidBranch => error
       @stderr.puts "fatal: #{ error.message }"
       exit 128
+    end
+
+    def check_merge_status(branch_name)
+      upstream = repo.remotes.get_upstream(branch_name)
+      head_oid = upstream ? repo.refs.read_ref(upstream) : repo.refs.read_head
+      branch_oid = repo.refs.read_ref(branch_name)
+
+      if fast_forward_error(branch_oid, head_oid)
+        @stderr.puts "error: The branch '#{ branch_name }' is not fully merged."
+        exit 1
+      end
     end
 
   end

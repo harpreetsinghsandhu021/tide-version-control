@@ -14,6 +14,7 @@ module Command
 
     CAPABILITIES = ["ofs-delta"]
     UPLOAD_PACK = "git-upload-pack"
+    RECEIVE_PACK = "git-receive-pack"
     
 
     def define_options
@@ -45,7 +46,6 @@ module Command
     end
 
     def configure
-
       current_branch = repo.refs.current_ref.short_name
       branch_remote = repo.config.get(["branch", current_branch, "remote"])
 

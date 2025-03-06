@@ -7,6 +7,7 @@ require_relative "./repository/migration"
 require_relative './repository/status'
 require_relative "./repository/pending_commit"
 require_relative "./repository/hard_reset"
+require_relative "./repository/divergence.rb"
 require_relative "./config/stack"
 
 class Repository
@@ -54,5 +55,9 @@ class Repository
 
   def remotes 
     @remotes ||= Remotes.new(config.file(:local))
+  end
+
+  def divergence(ref)
+    Divergence.new(self, ref)
   end
 end

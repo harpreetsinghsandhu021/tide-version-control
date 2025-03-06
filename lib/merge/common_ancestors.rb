@@ -1,3 +1,5 @@
+require "set"
+
 module Merge 
   class CommonAncestors
     # Designed to find common ancestors bw two commits within a repository. It leverages a queue
@@ -9,7 +11,7 @@ module Merge
     def initialize(database, one, twos)
       @database = database
       # Hash to store flags for each visited commit.
-      @flags = Hash.new { |hash, new| hash[oid] = Set.new } 
+      @flags = Hash.new { |hash, oid| hash[oid] = Set.new } 
       # store commits that need to be visited
       @queue = []
 
@@ -62,15 +64,28 @@ module Merge
 
     end
 
+    def counts
+      ones, twos = 0, 0
+
+      @flags.each do |oid, flags|
+        next if flags.size != 1
+        ones += 1 if flags.include?(:parent1)
+        twos += 1 if flags.include?(:parent2)
+      end
+
+      [ones, twos]
+    end
+
+    def marked?(oid, flag)
+      @flags[oid].include?(flag)
+    end
+    
     private 
 
     def all_stale?
       @queue.all? { |commit| marked?(commit.oid, :stale) }
     end
 
-    def marked?(oid, flag)
-      @flags[oid].include?(flag)
-    end
 
     def process_queue
       commit = @queue.shift

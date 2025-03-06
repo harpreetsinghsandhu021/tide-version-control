@@ -3,6 +3,7 @@
 class Revision
   InvalidObject = Class.new(StandardError)
 
+
   COMMIT = "commit"
 
   HintedError = Struct.new(:message, :hint)
@@ -31,6 +32,13 @@ class Revision
     end
   end
 
+  Upstream = Struct.new(:rev) do
+    def resolve(context)
+      name = context.upstream(rev.name)
+      context.read_ref(name)
+    end
+  end
+
   # Regular expression defining invalid characters and patterns in reference names
   # Follows Git's reference naming rules
   INVALID_NAME = /
@@ -51,10 +59,13 @@ class Revision
 
   # Pattern matching for ancestor reference (ends with ~N where N is a number)
   ANCESTOR = /^(.+)~(\d+)$/
+
+  UPSTREAM = /^(.*)@\{u(pstream)?\}$/i
   
   # Common reference aliases
   REF_ALIASES = {
-    "@" => "HEAD"  # @ is an alias for HEAD
+    "@" => "HEAD",  # @ is an alias for HEAD
+    ""  => "HEAD"
   }
 
   # Parses a revision string and returns a structured representation
@@ -65,7 +76,11 @@ class Revision
   def self.parse(revision)
     if match = PARENT.match(revision)
       rev = Revision.parse(match[1])
-      rev ? Parent.new(rev) : nil
+      n = (match[2] == "") ? 1 : match[2].to_i
+      rev ? Parent.new(rev, n) : nil
+    elsif match = UPSTREAM.match(revision)
+      rev = Revision.parse(match[1])
+      rev ? Upstream.new(rev) : nil
     elsif match = ANCESTOR.match(revision)
       rev = Revision.parse(match[1])
       rev ? Ancestor.new(rev, match[2].to_i) : nil
@@ -74,6 +89,7 @@ class Revision
       Ref.new(name)
     end
   end
+
 
   attr_reader :errors
 
@@ -115,21 +131,6 @@ class Revision
     commit.parents[n - 1]
   end
 
-  def load_typed_object(oid, type)
-    return nil if !oid
-
-    object = @repo.database.load(oid)
-
-    if object.type == type
-      object
-    else 
-      message = "object #{ oid } is a #{ object.type }, not a #{ type }"
-      @errors.push(HintedError.new(message, []))
-
-      nil
-    end
-  end
-
   # Delegates to the Red,s object attached to the repository
   def read_ref(name)
     oid = @repo.refs.read_ref(name)
@@ -144,6 +145,28 @@ class Revision
     end
 
     nil
+  end
+
+  def upstream(branch)
+    branch = @repo.refs.current_ref.short_name if branch == HEAD
+    @repo.remotes.get_upstream(branch)
+  end
+
+  private
+
+  def load_typed_object(oid, type)
+    return nil if !oid
+
+    object = @repo.database.load(oid)
+
+    if object.type == type
+      object
+    else 
+      message = "object #{ oid } is a #{ object.type }, not a #{ type }"
+      @errors.push(HintedError.new(message, []))
+
+      nil
+    end
   end
 
   # Constructs the error message by reading all the candidate IDs from the database and listing 

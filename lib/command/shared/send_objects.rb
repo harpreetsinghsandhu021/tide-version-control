@@ -1,5 +1,6 @@
 require_relative "../../rev_list"
 require_relative "../../pack"
+require_relative "../../pack/writer"
 
 module Command
   # SendObjects module handles the network transmission of Git objects

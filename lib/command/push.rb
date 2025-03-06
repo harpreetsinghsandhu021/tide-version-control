@@ -1,6 +1,6 @@
-require_relative "../command/shared/fast_forward"
-require_relative "../command/shared/send_objects"
-require_relative "../command/shared/remote_client"
+require_relative "./shared/fast_forward"
+require_relative "./shared/send_objects"
+require_relative "./shared/remote_client"
 require_relative "../remotes"
 require_relative "../revision"
 
@@ -20,14 +20,14 @@ module Command
 
     def define_options
       @parser.on("-f", "--force") { @options[:force] = true}
-      @parser.on "--receive-pack=<receive-pack>" do |reciever|
-        @options[:reciever] = reciever
+      @parser.on "--receive-pack=<receive-pack>" do |receiver|
+        @options[:receiver] = receiver
       end
     end
 
     def run 
       configure 
-      start_agent("push", @reciever, @push_url, CAPABILITIES)
+      start_agent("push", @receiver, @push_url, CAPABILITIES)
 
       recv_references
       send_update_requests
@@ -38,18 +38,30 @@ module Command
       exit (@errors.empty? ? 0 : 1)
     end
 
-    def configure 
-      name = @args.fetch(0, Remotes::DEFAULT_REMOTE)
+    private
+
+    def configure
+      current_branch = repo.refs.current_ref.short_name
+      branch_remote  = repo.config.get(["branch", current_branch, "remote"])
+      branch_merge   = repo.config.get(["branch", current_branch, "merge"])
+
+      name   = @args.fetch(0, branch_remote || Remotes::DEFAULT_REMOTE)
       remote = repo.remotes.get(name)
 
-      @push_url = remote&.push_url || @args[0]
+      @push_url    = remote&.push_url || @args[0]
       @fetch_specs = remote&.fetch_specs || []
+      @receiver    = @options[:receiver] || remote&.receiver || RECEIVE_PACK
 
-      @receiver = @options[:receiver] || remote&.receiver || RECEIVE_PACK
-      @push_specs = (@args.size > 1) ? @args.drop(1) : remote&.push_specs
-
+      if @args.size > 1
+        @push_specs = @args.drop(1)
+      elsif branch_merge
+        spec = Remotes::Refspec.new(current_branch, branch_merge, false)
+        @push_specs = [spec.to_s]
+      else
+        @push_specs = remote&.push_specs
+      end
     end
-
+  
     def send_update_requests
       # Initialize storage for update operations and errors
       @updates = {}
@@ -62,7 +74,7 @@ module Command
       targets = Remotes::Refspec.expand(@push_specs, local_refs)
 
       # Process each target reference and its source mapping
-      targets.each do |target, source, forced|
+      targets.each do |target,( source, forced)|
         # Determine if update is valid and collect update information
         select_update(target, source, forced)
       end

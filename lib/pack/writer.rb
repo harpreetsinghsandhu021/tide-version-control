@@ -8,9 +8,6 @@ require_relative "./compressor"
 module Pack
   class Writer
 
-
-    Entry = Struct.new(:oid, :type)
-
     def initialize(output, database, options={})
       @output = output
       @digest = Digest::SHA1.new
@@ -21,6 +18,14 @@ module Pack
       @offset = 0
     end
 
+    def write_objects(rev_list)
+      prepare_pack_list(rev_list)
+      compress_objects
+      write_header
+      write_entries
+      @output.write(@digest.digest)
+    end
+
     private
 
     def write(data)
@@ -29,13 +34,7 @@ module Pack
       @offset += data.bytesize
     end
     
-    def write_objects(rev_list)
-      prepare_pack_list(rev_list)
-      compress_objects
-      write_header
-      write_entries
-      @output.write(@digest.digest)
-    end
+    
 
     def prepare_pack_list(rev_list)
       @pack_list = []

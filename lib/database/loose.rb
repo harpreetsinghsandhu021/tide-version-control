@@ -67,7 +67,7 @@ class Database
       path = object_path(oid)
   
       # Reads the object from disk and then decompress it using zlib
-      data = Zlib::Inflate.inflate(File.read(path, read_bytes))
+      data = Zlib::Inflate.new.inflate(File.read(path, read_bytes))
       # creates a StringScanner instance which can be used for parsing data
       scanner = StringScanner.new(data)
    

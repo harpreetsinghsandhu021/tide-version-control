@@ -16,7 +16,7 @@ module Pack
     end
 
     def add(entry)
-      return if OBJECT_SIZE.include?(entry.size)
+      return if !OBJECT_SIZE.include?(entry.size)
       @objects.push(entry)
     end
 

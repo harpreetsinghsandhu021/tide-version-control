@@ -84,6 +84,7 @@ module Command
 
     def print_long_format
       print_branch_status
+      print_upstream_status
       print_pending_commit_status
 
       print_changes("Changes to be committed", @status.index_changes, :green)
@@ -103,6 +104,35 @@ module Command
         puts "On branch #{ current.short_name }"
       end
     end
+
+    def print_upstream_status
+      divergence = repo.divergence(repo.refs.current_ref)
+      return if !divergence.upstream
+
+      base = repo.refs.short_name(divergence.upstream)
+      ahead = divergence.ahead
+      behind = divergence.behind
+
+      if ahead == 0 && behind == 0
+        puts "Your branch is up to date with '#{ base }'."
+      elsif behind == 0
+        puts "Your branch is ahead of '#{ base }' by #{ commits ahead }"
+      elsif ahead == 0
+        puts "Your branch is behind '#{ base }' by #{ commits behind }, and can be fast-forwarded." 
+      else 
+        puts <<~MSG
+          Your branch and '#{ base }' have diverged, 
+          and have #{ ahead } and #{ behind } different commits each, respectively. 
+        MSG
+      end
+
+      puts ""
+    end
+
+    def commits(n)
+      n == 1 ? "1 commit" : "#{ n } commits"
+    end
+
 
     def print_changes(message, changeSet, style, label_set = :normal)
       return if changeSet.nil? || changeSet.empty?
